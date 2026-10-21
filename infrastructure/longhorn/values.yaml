@@ -11,6 +11,12 @@ defaultSettings:
   # Keep this much of each disk free so Longhorn doesn't fill it completely.
   storageReservedPercentageForDefaultDisk: 10
 
+# Longhorn's pre-upgrade check is a Helm hook. Argo CD runs it before anything else
+# exists (no ServiceAccount yet), so it hangs and blocks the whole sync. The chart
+# says to disable it when using Argo CD. Longhorn's other version checks stay on.
+preUpgradeChecker:
+  jobEnabled: false
+
 persistence:
   # The StorageClass new PVCs use when they don't ask for one.
   defaultClass: true
