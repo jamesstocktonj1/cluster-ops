@@ -28,6 +28,44 @@ patches:
       proxy:
         disabled: true
 
+# Settings for every worker (not the control plane). These exist for Longhorn,
+# the replicated storage system (see docs/STORAGE.md).
+worker:
+  # Longhorn needs iSCSI and fstrim on the node. Talos has no package manager, so
+  # these are baked into the installer image. talhelper asks Talos Image Factory
+  # for an image with them and writes its URL into each worker's config.
+  schematic:
+    customization:
+      systemExtensions:
+        officialExtensions:
+          - siderolabs/iscsi-tools
+          - siderolabs/util-linux-tools
+
+  # Longhorn stores replicas on a second disk. Talos formats it and mounts it at
+  # /var/mnt/longhorn. The size match selects the 64GB data disk and never the
+  # ~16GB system disk; until that disk is attached the volume simply stays pending.
+  userVolumes:
+    - name: longhorn
+      provisioning:
+        diskSelector:
+          match: disk.size > 50u * GB && !system_disk
+        minSize: 50GB   # required by Talos; the volume uses the rest of the disk
+
+  # Kubelet runs in a container, so the host path must be shared into it or
+  # Longhorn's volumes won't mount into pods.
+  patches:
+    - |-
+      machine:
+        kubelet:
+          extraMounts:
+            - destination: /var/mnt/longhorn
+              type: bind
+              source: /var/mnt/longhorn
+              options:
+                - bind
+                - rshared
+                - rw
+
 # Node IPs come from DHCP reservations on the router, so the machine config has
 # no static network section. If a recreated VM gets a new MAC, update its
 # reservation or the IPs below will be wrong.
