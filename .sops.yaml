@@ -1,0 +1,5 @@
+# SOPS encrypts any file named *.sops.yaml with this age public key.
+# The matching private key lives in ~/.config/sops/age/keys.txt (never commit it).
+creation_rules:
+  - path_regex: .*\.sops\.ya?ml$
+    age: age1ls7vzapkvzhnpv3sq2d3e97hygnc3zuwggj6ext3k4dumv4dj42qg823nl
