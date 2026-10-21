@@ -1,0 +1,61 @@
+# cloudflared opens an outbound connection to Cloudflare and forwards requests for
+# your tunnel's hostnames to services inside the cluster. No inbound port is
+# opened on your router.
+#
+# The hostname -> service routes are configured in the Cloudflare dashboard
+# (remotely-managed tunnel), not here. Only the token is needed.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+spec:
+  replicas: 2   # both connect to the same tunnel; one can restart without downtime
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2026.10.3
+          args:
+            - tunnel
+            - --no-autoupdate          # the image version is pinned here instead
+            - --metrics
+            - 0.0.0.0:2000             # health endpoint used by the probes below
+            - run
+          env:
+            # Read from a Secret created by hand (see docs/CLOUDFLARE.md).
+            # It is deliberately NOT in git.
+            - name: TUNNEL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflared-token
+                  key: token
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 2000
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
