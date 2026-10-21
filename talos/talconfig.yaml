@@ -1,0 +1,53 @@
+# talhelper config: one file describing the whole cluster.
+# `talhelper genconfig` turns this (+ talsecret.sops.yaml) into per-node machine
+# configs in talos/clusterconfig/ (gitignored).
+# yaml-language-server: $schema=https://raw.githubusercontent.com/budimanjojo/talhelper/master/pkg/config/schemas/talconfig.json
+
+clusterName: stack
+
+# Pin versions so the cluster only changes when this file does.
+talosVersion: v1.12.1
+kubernetesVersion: v1.35.0
+
+# Where kubectl and the nodes reach the API server: the single control plane.
+# With one control plane there is no API redundancy, so etcd snapshots are the
+# recovery plan.
+endpoint: https://10.0.40.30:6443
+
+# Keep workloads off the control planes.
+allowSchedulingOnControlPlanes: false
+
+# We install Cilium ourselves, so Talos must not deploy its default CNI (Flannel).
+cniConfig:
+  name: none
+
+# Applied to every node. Cilium replaces kube-proxy, so turn kube-proxy off.
+patches:
+  - |-
+    cluster:
+      proxy:
+        disabled: true
+
+# Node IPs come from DHCP reservations on the router, so the machine config has
+# no static network section. If a recreated VM gets a new MAC, update its
+# reservation or the IPs below will be wrong.
+nodes:
+  - hostname: talos-cp-01
+    ipAddress: 10.0.40.30
+    controlPlane: true
+    installDisk: /dev/sda
+
+  - hostname: talos-wk-01
+    ipAddress: 10.0.40.31
+    controlPlane: false
+    installDisk: /dev/sda
+
+  - hostname: talos-wk-02
+    ipAddress: 10.0.40.32
+    controlPlane: false
+    installDisk: /dev/sda
+
+  - hostname: talos-wk-03
+    ipAddress: 10.0.40.33
+    controlPlane: false
+    installDisk: /dev/sda

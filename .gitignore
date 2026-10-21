@@ -1,0 +1,6 @@
+# talhelper output: contains the full machine configs and talosconfig (secrets)
+talos/clusterconfig/
+
+# age private keys / kubeconfigs must never be committed
+keys.txt
+kubeconfig
