@@ -1,0 +1,19 @@
+# Helm values for Longhorn, deployed by Argo CD (apps/longhorn.yaml).
+# Chart version is pinned in that Application, not here.
+
+defaultSettings:
+  # Where Longhorn stores replicas on each worker: the second disk, which Talos
+  # mounts here (see userVolumes in talos/talconfig.yaml).
+  defaultDataPath: /var/mnt/longhorn
+  # Two copies of each volume, on two different workers. A single-node or single-
+  # disk loss does not lose data. Three copies would leave only ~64GB usable.
+  defaultReplicaCount: 2
+  # Keep this much of each disk free so Longhorn doesn't fill it completely.
+  storageReservedPercentageForDefaultDisk: 10
+
+persistence:
+  # The StorageClass new PVCs use when they don't ask for one.
+  defaultClass: true
+  defaultClassReplicaCount: 2
+  # Delete the volume's data when its PVC is deleted.
+  reclaimPolicy: Delete
