@@ -1,0 +1,31 @@
+# Cilium itself. Two sources: the upstream Helm chart, and our values file from
+# this repo (referenced as $values).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - repoURL: https://helm.cilium.io
+      chart: cilium
+      targetRevision: 1.20.3   # must match what is running; bump to upgrade
+      helm:
+        releaseName: cilium
+        valueFiles:
+          - $values/infrastructure/cilium/values.yaml
+    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # No prune: a bad commit must not be able to delete the CNI.
+    syncOptions:
+      - ServerSideApply=true

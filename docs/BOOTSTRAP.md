@@ -4,8 +4,8 @@ How to take four blank Talos VMs to a working Kubernetes cluster with Cilium.
 Run every command from the repo root unless a step says otherwise.
 The cluster is 4 nodes: 1 control plane and 3 workers.
 
-**Scope:** this covers Talos + Cilium. Argo CD, Cloudflare and workloads are not
-written yet (see [Not covered yet](#not-covered-yet)).
+**Scope:** this covers Talos + Cilium. Next is [ARGOCD.md](ARGOCD.md). Cloudflare,
+storage and workloads are not written yet (see [Not covered yet](#not-covered-yet)).
 
 | Node      | IP          | Role          |
 | --------- | ----------- | ------------- |
@@ -91,10 +91,11 @@ on one node, ever.** Running it again on a live cluster can split etcd.
 Watch it come up:
 
 ```bash
-talosctl health --nodes 10.0.40.30
+talosctl get members --nodes 10.0.40.30
 ```
 
-Health may report the nodes as not ready until Cilium is installed (step 6).
+All four nodes should be listed. Don't run `talosctl health` yet: it waits for
+Ready nodes and fails until Cilium is installed (step 6). Run it in step 7.
 
 ## 5. Get a kubeconfig
 
@@ -201,7 +202,5 @@ sops -e -i talsecret.sops.yaml
 
 ## Not covered yet
 
-- Argo CD install and the app-of-apps layout
-- Cilium L2 announcements / LoadBalancer IP pool
 - Cloudflare (DNS, tunnel)
 - Storage and workloads

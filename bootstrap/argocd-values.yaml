@@ -1,0 +1,8 @@
+# Helm values for the one-time Argo CD install (see docs/ARGOCD.md).
+# Chart version is pinned on the helm command line.
+
+# Single-user homelab: no SSO, no notifications. Turn on later if wanted.
+dex:
+  enabled: false
+notifications:
+  enabled: false

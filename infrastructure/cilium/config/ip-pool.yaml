@@ -1,0 +1,10 @@
+# The range of LAN IPs Cilium may hand out to Services of type LoadBalancer.
+# Must be outside the router's DHCP pool and not used by any other device.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: lan-pool
+spec:
+  blocks:
+    - start: 10.0.40.200
+      stop: 10.0.40.220

@@ -1,0 +1,23 @@
+# The "root" Application. Applied by hand once; after that, Argo CD watches the
+# apps/ directory and creates every Application file it finds there.
+# To deploy something new: add a file to apps/ and push to main.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+    targetRevision: main
+    path: apps
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true      # delete apps whose file is removed from apps/
+      selfHeal: true   # undo manual changes made with kubectl

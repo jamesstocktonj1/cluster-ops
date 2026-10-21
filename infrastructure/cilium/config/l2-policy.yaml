@@ -1,0 +1,15 @@
+# Which nodes answer ARP for LoadBalancer IPs, and on which network interface.
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: lan-l2
+spec:
+  # Only announce from workers; the control plane stays out of the data path.
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist
+  # Match the VM NIC (ens18 on Proxmox) without hardcoding the name.
+  interfaces:
+    - ^ens.*
+  loadBalancerIPs: true

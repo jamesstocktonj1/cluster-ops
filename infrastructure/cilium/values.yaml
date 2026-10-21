@@ -1,0 +1,46 @@
+# Helm values for Cilium, deployed by Argo CD (apps/cilium.yaml).
+# Chart version is pinned in that Application, not here.
+
+# --- Talos-specific (same as the manual install in docs/BOOTSTRAP.md) ---------
+# Cilium replaces kube-proxy.
+kubeProxyReplacement: true
+# Talos runs a local API proxy (KubePrism) on every node at localhost:7445.
+k8sServiceHost: localhost
+k8sServicePort: 7445
+# Pod CIDRs are handed out by Kubernetes itself.
+ipam:
+  mode: kubernetes
+# Talos already mounts cgroups, so Cilium must not mount its own.
+cgroup:
+  autoMount:
+    enabled: false
+  hostRoot: /sys/fs/cgroup
+# Talos drops capabilities by default, so list what the agent needs.
+securityContext:
+  capabilities:
+    ciliumAgent:
+      - CHOWN
+      - KILL
+      - NET_ADMIN
+      - NET_RAW
+      - IPC_LOCK
+      - SYS_ADMIN
+      - SYS_RESOURCE
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    cleanCiliumState:
+      - NET_ADMIN
+      - SYS_ADMIN
+      - SYS_RESOURCE
+
+# --- LoadBalancer IPs on the LAN (new vs. the manual install) -------------------
+# Lets a Service of type LoadBalancer get an IP from the pool in config/ and
+# answer ARP for it, so devices on 10.0.40.0/24 can reach it.
+l2announcements:
+  enabled: true
+# L2 announcements make many API calls for leader election; raise the limits.
+k8sClientRateLimit:
+  qps: 20
+  burst: 40
