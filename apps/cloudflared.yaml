@@ -4,6 +4,8 @@ kind: Application
 metadata:
   name: cloudflared
   namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
 spec:
   project: default
   source:
