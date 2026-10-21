@@ -115,8 +115,12 @@ If it has an IP but the LAN can't reach it, check
   or press Refresh in the UI).
 - **Upgrade Cilium:** bump `targetRevision` in `apps/cilium.yaml`, push. Read the
   Cilium upgrade notes first.
-- **Remove an app:** delete its file from `apps/` and push. The root app prunes it.
-  (`cilium` itself has pruning off on purpose.)
+- **Remove an app:** delete its file from `apps/` and push. The root app prunes the
+  Application, but only an app with the `resources-finalizer.argocd.argoproj.io`
+  finalizer takes its pods, Services and namespace with it. Without the finalizer
+  they are left running, orphaned. Give every new app file the finalizer (copy
+  `apps/cloudflared.yaml`). `cilium` omits it on purpose, so removing it can never
+  delete the CNI.
 - **Don't `kubectl edit` managed resources.** `selfHeal` reverts it.
 
 ## Not covered yet

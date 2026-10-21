@@ -4,8 +4,8 @@ How to take four blank Talos VMs to a working Kubernetes cluster with Cilium.
 Run every command from the repo root unless a step says otherwise.
 The cluster is 4 nodes: 1 control plane and 3 workers.
 
-**Scope:** this covers Talos + Cilium. Next is [ARGOCD.md](ARGOCD.md). Cloudflare,
-storage and workloads are not written yet (see [Not covered yet](#not-covered-yet)).
+**Scope:** this covers Talos + Cilium. Next is [ARGOCD.md](ARGOCD.md), then [CLOUDFLARE.md](CLOUDFLARE.md).
+Storage and workloads are not written yet (see [Not covered yet](#not-covered-yet)).
 
 | Node      | IP          | Role          |
 | --------- | ----------- | ------------- |
@@ -202,5 +202,4 @@ sops -e -i talsecret.sops.yaml
 
 ## Not covered yet
 
-- Cloudflare (DNS, tunnel)
 - Storage and workloads
