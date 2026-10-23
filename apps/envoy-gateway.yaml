@@ -1,0 +1,27 @@
+# Envoy Gateway controller + Gateway API CRDs (the chart ships both).
+# The Gateway itself lives in apps/envoy-gateway-config.yaml.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: envoy-gateway
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: docker.io/envoyproxy   # OCI registry: no oci:// prefix in Argo
+    chart: gateway-helm
+    targetRevision: v1.9.2   # bump to upgrade; read the release notes first
+    helm:
+      releaseName: eg
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: envoy-gateway-system
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # No prune: a bad commit must not delete the CRDs and, with them, every route.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true   # the CRDs are too big for client-side apply

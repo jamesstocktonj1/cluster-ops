@@ -1,0 +1,24 @@
+# GatewayClass, EnvoyProxy settings and the shared Gateway (plain manifests).
+# Sync wave 1 so it applies after the controller and its CRDs exist.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: envoy-gateway-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+    targetRevision: main
+    path: infrastructure/envoy-gateway/config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: envoy-gateway-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
