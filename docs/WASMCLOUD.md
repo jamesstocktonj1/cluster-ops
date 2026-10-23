@@ -103,7 +103,7 @@ spec:
   type: ClusterIP
   ports:
     - port: 80
-      targetPort: 9191      # the host group's http.port in values.yaml
+      targetPort: 8080      # the host group's http.port in values.yaml
       protocol: TCP
 ---
 apiVersion: runtime.wasmcloud.dev/v1alpha1
