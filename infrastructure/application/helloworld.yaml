@@ -1,7 +1,7 @@
 # One app = one file. Three objects that must agree on the hostname:
 #   HTTPRoute (Envoy)  ->  Service  ->  WorkloadDeployment (wasmCloud host routing)
 #
-# Before use: replace helloworld.example.com (twice) with your real hostname, and add
+# The hostname appears twice (HTTPRoute and WorkloadDeployment) and must match. Add
 # the same hostname in the Cloudflare tunnel pointing at
 #   http://envoy.envoy-gateway-system.svc.cluster.local:80
 # Envoy and the tunnel both pass the Host header through unchanged, which is what
@@ -29,7 +29,7 @@ spec:
           interfaces:
             - incoming-handler
           config:
-            host: helloworld.example.com
+            host: hello.jamesstockton.com
 ---
 apiVersion: v1
 kind: Service
@@ -39,7 +39,9 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - port: 80
+    - name: http       # must match the port name on the operator's EndpointSlice, or
+                       # Envoy Gateway finds "no ready endpoints" and returns 503
+      port: 80
       targetPort: 8080   # the host group's http.port in infrastructure/wasmcloud/values.yaml
       protocol: TCP
 ---
@@ -53,7 +55,7 @@ spec:
     - name: shared
       namespace: envoy-gateway-system
   hostnames:
-    - helloworld.example.com
+    - hello.jamesstockton.com
   rules:
     - backendRefs:
         - name: helloworld
