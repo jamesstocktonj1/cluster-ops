@@ -1,0 +1,60 @@
+# One app = one file. Three objects that must agree on the hostname:
+#   HTTPRoute (Envoy)  ->  Service  ->  WorkloadDeployment (wasmCloud host routing)
+#
+# Before use: replace helloworld.example.com (twice) with your real hostname, and add
+# the same hostname in the Cloudflare tunnel pointing at
+#   http://envoy.envoy-gateway-system.svc.cluster.local:80
+# Envoy and the tunnel both pass the Host header through unchanged, which is what
+# wasmCloud routes on.
+apiVersion: runtime.wasmcloud.dev/v1alpha1
+kind: WorkloadDeployment
+metadata:
+  name: helloworld
+  namespace: application
+spec:
+  replicas: 1
+  template:
+    spec:
+      hostSelector:
+        hostgroup: default
+      kubernetes:
+        service:
+          name: helloworld   # the operator fills this Service's EndpointSlices
+      components:
+        - name: helloworld
+          image: ghcr.io/wasmcloud/components/hello-world:0.1.0
+      hostInterfaces:
+        - namespace: wasi
+          package: http
+          interfaces:
+            - incoming-handler
+          config:
+            host: helloworld.example.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: helloworld
+  namespace: application
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 8080   # the host group's http.port in infrastructure/wasmcloud/values.yaml
+      protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: helloworld
+  namespace: application
+spec:
+  parentRefs:
+    - name: shared
+      namespace: envoy-gateway-system
+  hostnames:
+    - helloworld.example.com
+  rules:
+    - backendRefs:
+        - name: helloworld
+          port: 80

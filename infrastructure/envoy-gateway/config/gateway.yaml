@@ -1,0 +1,49 @@
+# Envoy proxy settings. Gives the proxy Service a fixed name (otherwise it is
+# generated, e.g. envoy-envoy-gateway-system-shared-1a2b3c4d) so the Cloudflare
+# tunnel can point at a stable address:
+#   http://envoy.envoy-gateway-system.svc.cluster.local:80
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: shared
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyService:
+        name: envoy
+        # ClusterIP: only the Cloudflare tunnel reaches it. Use LoadBalancer to
+        # also get a LAN IP from the Cilium pool.
+        type: ClusterIP
+      envoyDeployment:
+        replicas: 2
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  parametersRef:
+    group: gateway.envoyproxy.io
+    kind: EnvoyProxy
+    name: shared
+    namespace: envoy-gateway-system
+---
+# The one Gateway every app attaches its HTTPRoute to. Plain HTTP only: TLS ends
+# at Cloudflare (see docs/CLOUDFLARE.md).
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shared
+  namespace: envoy-gateway-system
+spec:
+  gatewayClassName: envoy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All   # apps live in their own namespaces and bring their own route
