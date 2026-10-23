@@ -1,0 +1,30 @@
+# wasmCloud v2: runtime-operator, CRDs, NATS (JetStream) and the wasmCloud hosts.
+# See docs/WASMCLOUD.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: wasmcloud
+  namespace: argocd
+spec:
+  project: default
+  sources:
+    - repoURL: ghcr.io/wasmcloud/charts   # OCI registry: no oci:// prefix in Argo
+      chart: runtime-operator
+      targetRevision: 2.11.0   # bump to upgrade; read the release notes first
+      helm:
+        releaseName: wasmcloud
+        valueFiles:
+          - $values/infrastructure/wasmcloud/values.yaml
+    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: wasmcloud
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # No prune: a bad commit must not delete the CRDs and, with them, every workload.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

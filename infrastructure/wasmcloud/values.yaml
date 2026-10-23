@@ -1,0 +1,13 @@
+# wasmCloud v2 runtime-operator chart values (chart version pinned in apps/wasmcloud.yaml).
+# Only differences from the chart defaults are listed.
+gateway:
+  enabled: false   # deprecated since 2.0.3; HTTP goes via EndpointSlices on normal Services
+runtime:
+  hostGroups:
+    - name: default     # WorkloadDeployments select this with hostSelector.hostgroup
+      replicas: 3       # one host pod per worker
+      service:
+        type: ClusterIP
+      http:
+        enabled: true
+        port: 8080
