@@ -1,11 +1,16 @@
-# One app = one file. Three objects that must agree on the hostname:
-#   HTTPRoute (Envoy)  ->  Service  ->  WorkloadDeployment (wasmCloud host routing)
+# One app = one file: WorkloadDeployment, Service and HTTPRoute together.
 #
-# The hostname appears twice (HTTPRoute and WorkloadDeployment) and must match. Add
-# the same hostname in the Cloudflare tunnel pointing at
+#   browser -> Cloudflare -> Envoy (matches /hello, rewrites Host + path) -> wasmCloud host
+#
+# All apps share one public hostname and are told apart by path prefix. wasmCloud
+# routes on the Host header only (not the path, not X-Forwarded-Host), so the
+# HTTPRoute rewrites Host to an internal per-app name, and that same name is the
+# WorkloadDeployment's config.host. It never leaves the cluster, but it must be unique
+# per app and match in both places below (helloworld.internal).
+#
+# To add an app: copy this file, change the names, the path prefix and the internal
+# host. The public hostname needs adding to the Cloudflare tunnel only once, pointing at
 #   http://envoy.envoy-gateway-system.svc.cluster.local:80
-# Envoy and the tunnel both pass the Host header through unchanged, which is what
-# wasmCloud routes on.
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
@@ -29,7 +34,7 @@ spec:
           interfaces:
             - incoming-handler
           config:
-            host: hello.jamesstockton.com
+            host: helloworld.internal
 ---
 apiVersion: v1
 kind: Service
@@ -55,8 +60,19 @@ spec:
     - name: shared
       namespace: envoy-gateway-system
   hostnames:
-    - hello.jamesstockton.com
+    - apps.jamesstockton.com   # shared by every app; each takes its own path prefix
   rules:
-    - backendRefs:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /hello
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            hostname: helloworld.internal   # must equal config.host above
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /         # /hello/x reaches the component as /x
+      backendRefs:
         - name: helloworld
           port: 80
