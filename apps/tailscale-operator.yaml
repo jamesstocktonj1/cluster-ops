@@ -32,3 +32,6 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true   # the CRDs are too big for client-side apply
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
