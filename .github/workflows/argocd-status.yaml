@@ -1,0 +1,33 @@
+name: Application Status
+
+on:
+  workflow_dispatch:
+    inputs:
+      application:
+        type: choice
+        description: ArgoCD Application
+        options:
+          - application
+          - cloudflared
+          - wasmCloud
+
+  # test trigger
+  pull_request:
+
+permissions:
+  id-token: write
+
+jobs:
+  status:
+    name: ArgoCD Status
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_SECRET }}
+          tags: tag:cicd
+      - name: Test Connection
+        run: |
+          tailscale ping argocd
