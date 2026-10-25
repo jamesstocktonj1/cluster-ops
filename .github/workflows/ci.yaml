@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   yamllint:
+    name: YAML lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,6 +23,7 @@ jobs:
           yamllint --strict .
 
   kubeconform:
+    name: Kubeconform
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,6 +42,7 @@ jobs:
             apps bootstrap infrastructure
 
   helm:
+    name: Helm Lint and Template
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
