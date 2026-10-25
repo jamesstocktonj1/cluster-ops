@@ -6,10 +6,12 @@ on:
       application:
         type: choice
         description: ArgoCD Application
+        default: all
         options:
+          - all
           - application
           - cloudflared
-          - wasmCloud
+          - wasmcloud
 
   # test trigger
   pull_request:
@@ -28,6 +30,28 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_SECRET }}
           tags: tag:cicd
-      - name: Test Connection
+      - name: Setup ArgoCD CLI
         run: |
-          tailscale ping argocd
+          curl -fsSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 0755 argocd /usr/local/bin/argocd
+          argocd version --client
+      - name: Application summary
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+          # Argo CD serves a self-signed certificate, and --grpc-web works through the proxy.
+          ARGOCD_OPTS: --grpc-web --insecure
+          APP: ${{ inputs.application }}
+        run: |
+          if [ -n "$APP" ] && [ "$APP" != "all" ]; then
+            argocd app get "$APP" -o json | jq -s '.' > apps.json
+          else
+            argocd app list -o json > apps.json
+          fi
+          {
+            echo "## ArgoCD applications"
+            echo
+            echo "| Application | Sync | Health | Revision |"
+            echo "| --- | --- | --- | --- |"
+            jq -r '.[] | "| \(.metadata.name) | \(.status.sync.status // "Unknown") | \(.status.health.status // "Unknown") | \((.status.sync.revision // ((.status.sync.revisions // []) | last) // "-")[0:7]) |"' apps.json
+          } >> "$GITHUB_STEP_SUMMARY"
