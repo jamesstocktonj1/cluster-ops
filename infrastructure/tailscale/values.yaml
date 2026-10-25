@@ -1,0 +1,18 @@
+# Helm values for the Tailscale operator, deployed by Argo CD (apps/tailscale-operator.yaml).
+# Chart version is pinned in that Application, not here.
+
+# The OAuth client credentials come from a Secret created by hand
+# (operator-oauth in the tailscale namespace, see docs/TAILSCALE.md). It is
+# deliberately NOT in git, so clientId/clientSecret are left unset here.
+
+operatorConfig:
+  # Name the operator shows up as in the Tailscale admin console.
+  hostname: talos-operator
+  # Tag applied to the operator. Must exist in the tailnet policy file, with
+  # itself as owner (docs/TAILSCALE.md step 1).
+  defaultTags:
+    - "tag:k8s-operator"
+
+# Tag for the proxies the operator creates for each exposed Service.
+proxyConfig:
+  defaultTags: "tag:k8s"
