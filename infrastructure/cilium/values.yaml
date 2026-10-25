@@ -44,3 +44,11 @@ l2announcements:
 k8sClientRateLimit:
   qps: 20
   burst: 40
+
+# --- Tailscale operator proxies ---------------------------------------------------
+# The Tailscale proxy pod forwards tailnet traffic to a Service's ClusterIP. Cilium
+# treats ClusterIPs as cluster-internal only and passes such forwarded packets through
+# untranslated ("[ClusterIP, non-routable]"), so the connection never reaches the pods.
+# This makes ClusterIPs translatable for that traffic (docs/TAILSCALE.md).
+bpf:
+  lbExternalClusterIP: true
