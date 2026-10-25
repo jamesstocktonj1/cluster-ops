@@ -12,7 +12,7 @@ metadata:
   namespace: argocd
   annotations:
     tailscale.com/hostname: argocd
-    tailscale.com/tags: "tag:k8s"
+    tailscale.com/tags: "tag:k8s,tag:cicd"
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale
