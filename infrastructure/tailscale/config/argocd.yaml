@@ -1,0 +1,25 @@
+# Puts the Argo CD API/UI on the tailnet as argocd.<tailnet>.ts.net. The operator
+# starts a proxy pod for this Service; traffic is passed through as TCP, so Argo
+# CD's own TLS is what the client sees. Reach it from GitHub Actions via
+# docs/TAILSCALE.md.
+#
+# This is a second Service for the same pods, so the bootstrap Helm install of
+# Argo CD is untouched.
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server-tailscale
+  namespace: argocd
+  annotations:
+    tailscale.com/hostname: argocd
+    tailscale.com/tags: "tag:k8s"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  selector:
+    app.kubernetes.io/name: argocd-server
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8080
+      protocol: TCP
