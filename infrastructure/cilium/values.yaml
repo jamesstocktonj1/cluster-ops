@@ -46,9 +46,11 @@ k8sClientRateLimit:
   burst: 40
 
 # --- Tailscale operator proxies ---------------------------------------------------
-# The Tailscale proxy pod forwards tailnet traffic to a Service's ClusterIP. Cilium
-# treats ClusterIPs as cluster-internal only and passes such forwarded packets through
-# untranslated ("[ClusterIP, non-routable]"), so the connection never reaches the pods.
-# This makes ClusterIPs translatable for that traffic (docs/TAILSCALE.md).
-bpf:
-  lbExternalClusterIP: true
+# With kube-proxy replacement, Cilium's socket-level load balancing also runs inside
+# pod network namespaces. It translates a pod's own connections to ClusterIPs, but
+# packets a pod merely forwards (the Tailscale proxy DNATs tailnet traffic to the
+# Service's ClusterIP) are never translated and go nowhere. Restricting socket LB to
+# the host namespace makes pods use per-packet translation instead
+# (docs/TAILSCALE.md). Needs a rollout restart of ds/cilium to take effect.
+socketLB:
+  hostNamespaceOnly: true
