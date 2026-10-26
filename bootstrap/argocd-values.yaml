@@ -6,3 +6,16 @@ dex:
   enabled: false
 notifications:
   enabled: false
+
+# Account for GitHub Actions (.github/workflows/argocd-status.yaml and
+# argocd-sync.yaml). It can only log in with an API token (apiKey), never with a
+# password, and may only read and sync Applications. Generate the token with
+# `argocd account generate-token --account ci` (docs/ARGOCD.md).
+configs:
+  cm:
+    accounts.ci: apiKey
+  rbac:
+    policy.csv: |
+      p, role:ci, applications, get, */*, allow
+      p, role:ci, applications, sync, */*, allow
+      g, ci, role:ci
