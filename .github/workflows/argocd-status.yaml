@@ -30,7 +30,6 @@ jobs:
           oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_SECRET }}
           tags: tag:cicd
-          args: --accept-dns=false
       - name: Setup ArgoCD CLI
         run: |
           curl -fsSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
