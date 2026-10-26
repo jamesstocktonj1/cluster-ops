@@ -13,9 +13,6 @@ on:
           - cloudflared
           - wasmcloud
 
-  # test trigger
-  pull_request:
-
 permissions:
   id-token: write
 
