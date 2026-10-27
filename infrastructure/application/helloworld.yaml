@@ -1,6 +1,6 @@
 # One app = one file: WorkloadDeployment, Service and HTTPRoute together.
 #
-#   browser -> Cloudflare -> Envoy (matches /hello, rewrites Host + path) -> wasmCloud host
+#   tailnet device -> Tailscale proxy -> Envoy (matches /hello, rewrites Host + path) -> wasmCloud host
 #
 # All apps share one public hostname and are told apart by path prefix. wasmCloud
 # routes on the Host header only (not the path, not X-Forwarded-Host), so the
@@ -9,8 +9,7 @@
 # per app and match in both places below (helloworld.internal).
 #
 # To add an app: copy this file, change the names, the path prefix and the internal
-# host. The public hostname needs adding to the Cloudflare tunnel only once, pointing at
-#   http://envoy.envoy-gateway-system.svc.cluster.local:80
+# host. The shared hostname needs setting up only once (docs/TAILSCALE.md step 8).
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
@@ -60,7 +59,7 @@ spec:
     - name: shared
       namespace: envoy-gateway-system
   hostnames:
-    - apps.jamesstockton.com   # shared by every app; each takes its own path prefix
+    - apps.jamesstockton.com   # shared by every app (DNS -> tailnet IP); each takes its own path prefix
   rules:
     - matches:
         - path:

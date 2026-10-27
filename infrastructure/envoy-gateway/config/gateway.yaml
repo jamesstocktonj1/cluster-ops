@@ -1,7 +1,10 @@
 # Envoy proxy settings. Gives the proxy Service a fixed name (otherwise it is
-# generated, e.g. envoy-envoy-gateway-system-shared-1a2b3c4d) so the Cloudflare
-# tunnel can point at a stable address:
-#   http://envoy.envoy-gateway-system.svc.cluster.local:80
+# generated, e.g. envoy-envoy-gateway-system-shared-1a2b3c4d) and puts it on the
+# tailnet as apps.<tailnet>.ts.net (docs/TAILSCALE.md). Apps are tailnet-only.
+#
+# This lives here rather than in infrastructure/tailscale/config because Envoy Gateway
+# owns and regenerates this Service; a second hand-written Service would have to
+# guess its pod selector.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
@@ -13,9 +16,11 @@ spec:
     kubernetes:
       envoyService:
         name: envoy
-        # ClusterIP: only the Cloudflare tunnel reaches it. Use LoadBalancer to
-        # also get a LAN IP from the Cilium pool.
-        type: ClusterIP
+        type: LoadBalancer
+        loadBalancerClass: tailscale
+        annotations:
+          tailscale.com/hostname: apps
+          tailscale.com/tags: "tag:k8s"
       envoyDeployment:
         replicas: 2
 ---
@@ -31,8 +36,8 @@ spec:
     name: shared
     namespace: envoy-gateway-system
 ---
-# The one Gateway every app attaches its HTTPRoute to. Plain HTTP only: TLS ends
-# at Cloudflare (see docs/CLOUDFLARE.md).
+# The one Gateway every app attaches its HTTPRoute to. Plain HTTP only: traffic
+# arrives over the tailnet, which is already encrypted by WireGuard.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
