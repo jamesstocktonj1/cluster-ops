@@ -2,14 +2,15 @@
 #
 #   tailnet device -> Tailscale proxy -> Envoy (matches /hello, rewrites Host + path) -> wasmCloud host
 #
-# All apps share one public hostname and are told apart by path prefix. wasmCloud
-# routes on the Host header only (not the path, not X-Forwarded-Host), so the
-# HTTPRoute rewrites Host to an internal per-app name, and that same name is the
+# All apps share the one tailnet hostname (apps.<tailnet>.ts.net) and are told apart by
+# path prefix. The route sets no `hostnames`, so it matches whatever Host the client
+# sent. wasmCloud routes on the Host header only (not the path, not X-Forwarded-Host),
+# so the HTTPRoute rewrites Host to an internal per-app name, and that same name is the
 # WorkloadDeployment's config.host. It never leaves the cluster, but it must be unique
 # per app and match in both places below (helloworld.internal).
 #
 # To add an app: copy this file, change the names, the path prefix and the internal
-# host. The shared hostname needs setting up only once (docs/TAILSCALE.md step 8).
+# host. Nothing else to set up: the tailnet hostname comes from the EnvoyProxy.
 apiVersion: runtime.wasmcloud.dev/v1alpha1
 kind: WorkloadDeployment
 metadata:
@@ -58,8 +59,6 @@ spec:
   parentRefs:
     - name: shared
       namespace: envoy-gateway-system
-  hostnames:
-    - apps.jamesstockton.com   # shared by every app (DNS -> tailnet IP); each takes its own path prefix
   rules:
     - matches:
         - path:
