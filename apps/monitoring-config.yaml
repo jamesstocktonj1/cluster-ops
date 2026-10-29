@@ -1,0 +1,26 @@
+# PodMonitor that scrapes opted-in pods (plain manifests).
+# Sync wave 1 so it applies after the CRDs from the monitoring app above.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+    targetRevision: main
+    path: infrastructure/monitoring/config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - SkipDryRunOnMissingResource=true   # the PodMonitor CRD may not exist on first sync

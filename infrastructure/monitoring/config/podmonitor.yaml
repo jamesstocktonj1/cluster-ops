@@ -1,0 +1,17 @@
+# Scrapes any pod, in any namespace, that opts in with the label
+# `prometheus.io/scrape: "true"` and names its metrics port `metrics`.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: pods
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    any: true
+  selector:
+    matchLabels:
+      prometheus.io/scrape: "true"
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      interval: 30s

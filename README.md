@@ -34,5 +34,6 @@ GitOps: push to `main` and Argo CD applies it.
 - **Tailscale operator**: private access to the cluster, including Argo CD from
   GitHub Actions.
 - **wasmCloud v2**: runs WebAssembly components.
+- **Prometheus Operator**: metrics, scraping opted-in pods.
 
 More detail for each is in [docs/](docs/).
