@@ -1,0 +1,43 @@
+# Helm values for kube-prometheus-stack, deployed by Argo CD (apps/monitoring.yaml).
+# Chart version is pinned in that Application, not here.
+# Kept small: the Prometheus Operator, one Prometheus, node-exporter and
+# kube-state-metrics. No Grafana or Alertmanager.
+
+grafana:
+  enabled: false
+alertmanager:
+  enabled: false
+
+# Talos binds these control plane components to localhost, so they can't be
+# scraped from a pod; Cilium replaces kube-proxy.
+kubeEtcd:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+prometheus:
+  prometheusSpec:
+    # Pick up every PodMonitor/ServiceMonitor/rule in any namespace, not just
+    # ones labelled with this Helm release.
+    podMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 15d
+    retentionSize: 18GB
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: longhorn
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 20Gi

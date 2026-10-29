@@ -1,0 +1,35 @@
+# Prometheus Operator + Prometheus (kube-prometheus-stack). See docs/MONITORING.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: monitoring
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  sources:
+    - repoURL: https://prometheus-community.github.io/helm-charts
+      chart: kube-prometheus-stack
+      targetRevision: 92.14.1   # bump to upgrade; read the release notes first
+      helm:
+        releaseName: monitoring
+        valueFiles:
+          - $values/infrastructure/monitoring/values.yaml
+    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # No prune: a bad commit must not delete the CRDs and, with them, every monitor.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true   # the CRDs are too big for client-side apply
+    # node-exporter needs host namespaces; Talos enforces "baseline" by default.
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
