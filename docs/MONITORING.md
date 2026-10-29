@@ -35,6 +35,14 @@ spec:
 Metrics are read from `/metrics` every 30s. For a different path or port name, add
 your own `PodMonitor`; Prometheus picks up all of them.
 
+## Envoy Gateway and wasmCloud
+
+- **Envoy Gateway**: [envoy-gateway.yaml](../infrastructure/monitoring/config/envoy-gateway.yaml)
+  scrapes the controller and the two Envoy proxy pods. Both expose metrics by default.
+- **wasmCloud**: not scraped. The v2 `runtime-operator` chart exposes no Prometheus
+  endpoint (the operator serves only health probes on 8082, hosts only `/livez` and
+  `/readyz` on 8081). Revisit if a later chart adds one.
+
 ## Checking it
 
 ```bash
