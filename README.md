@@ -35,5 +35,6 @@ GitOps: push to `main` and Argo CD applies it.
   GitHub Actions.
 - **wasmCloud v2**: runs WebAssembly components.
 - **Prometheus Operator**: metrics, scraping opted-in pods.
+- **Grafana**: dashboards over Prometheus, public via the Cloudflare Tunnel.
 
 More detail for each is in [docs/](docs/).
