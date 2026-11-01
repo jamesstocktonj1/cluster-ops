@@ -1,10 +1,48 @@
 # Helm values for kube-prometheus-stack, deployed by Argo CD (apps/monitoring.yaml).
 # Chart version is pinned in that Application, not here.
-# Kept small: the Prometheus Operator, one Prometheus, node-exporter and
-# kube-state-metrics. No Grafana or Alertmanager.
+# Kept small: the Prometheus Operator, one Prometheus, node-exporter,
+# kube-state-metrics and Grafana. No Alertmanager.
 
+# Grafana, public at https://k8smetrics.jamesstockton.com via the Cloudflare Tunnel
+# (docs/MONITORING.md). The chart adds Prometheus as a data source and loads its
+# default Kubernetes dashboards.
 grafana:
-  enabled: false
+  enabled: true
+  # Admin login comes from a Secret created by hand (docs/MONITORING.md), not
+  # from git. Without this the chart generates a random password on every
+  # render, which Argo CD would see as drift and keep rotating.
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  # Dashboards and users made in the UI live in Grafana's SQLite database, so
+  # keep it on a Longhorn volume. "sts" runs Grafana as a StatefulSet, which
+  # avoids two pods fighting over the ReadWriteOnce volume during a rollout.
+  persistence:
+    enabled: true
+    type: sts
+    storageClassName: longhorn
+    accessModes: [ReadWriteOnce]
+    size: 5Gi
+  grafana.ini:
+    server:
+      # Must match the public hostname, or redirects and links point at the
+      # in-cluster address.
+      root_url: https://k8smetrics.jamesstockton.com
+    users:
+      allow_sign_up: false
+    auth.anonymous:
+      enabled: false
+    analytics:
+      reporting_enabled: false
+      check_for_updates: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
 alertmanager:
   enabled: false
 
