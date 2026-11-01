@@ -3,7 +3,7 @@
 # Kept small: the Prometheus Operator, one Prometheus, node-exporter,
 # kube-state-metrics and Grafana. No Alertmanager.
 
-# Grafana, public at https://grafana.jamesstockton.com via the Cloudflare Tunnel
+# Grafana, public at https://k8smetrics.jamesstockton.com via the Cloudflare Tunnel
 # (docs/MONITORING.md). The chart adds Prometheus as a data source and loads its
 # default Kubernetes dashboards.
 grafana:
@@ -28,7 +28,7 @@ grafana:
     server:
       # Must match the public hostname, or redirects and links point at the
       # in-cluster address.
-      root_url: https://grafana.jamesstockton.com
+      root_url: https://k8smetrics.jamesstockton.com
     users:
       allow_sign_up: false
     auth.anonymous:

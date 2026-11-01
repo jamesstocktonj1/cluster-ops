@@ -2,7 +2,7 @@
 
 Continues from [STORAGE.md](STORAGE.md) (Prometheus stores its data on a Longhorn
 volume). Deploys the Prometheus Operator, a single Prometheus that scrapes pods,
-and Grafana for dashboards at https://grafana.jamesstockton.com.
+and Grafana for dashboards at https://k8smetrics.jamesstockton.com.
 
 ## How it works
 
@@ -55,7 +55,7 @@ In the `stack` tunnel's **Public Hostname** settings (see
 
 | Field     | Value                                             |
 | --------- | ------------------------------------------------- |
-| Subdomain | `grafana`                                         |
+| Subdomain | `k8smetrics`                                      |
 | Domain    | `jamesstockton.com`                               |
 | Type      | `HTTP`                                            |
 | URL       | `monitoring-grafana.monitoring.svc.cluster.local:80` |
@@ -66,7 +66,7 @@ you pick a different one, change both.
 ### 3. Put Cloudflare Access in front (recommended)
 
 Grafana has its own login, but it is still an admin UI on the internet. Add a
-**Cloudflare Access** application for `grafana.jamesstockton.com` (Zero Trust >
+**Cloudflare Access** application for `k8smetrics.jamesstockton.com` (Zero Trust >
 Access > Applications, a self-hosted app with a policy that allows only your
 email). Requests then never reach the cluster until you have signed in.
 
