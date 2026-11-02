@@ -1,0 +1,53 @@
+name: ArgoCD Sync
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+
+concurrency:
+  group: argocd-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync root app
+    runs-on: ubuntu-latest
+    env:
+      ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+      ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+      # Argo CD serves a self-signed certificate, and --grpc-web works through the proxy.
+      ARGOCD_OPTS: --grpc-web --insecure
+    steps:
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TAILSCALE_SECRET }}
+          tags: tag:cicd
+      - name: Setup ArgoCD CLI
+        run: |
+          curl -fsSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 0755 argocd /usr/local/bin/argocd
+          argocd version --client
+      - name: Sync root app
+        run: |
+          # Hard refresh so Argo CD sees the new commit instead of its cached manifests.
+          argocd app get root --hard-refresh > /dev/null
+          argocd app sync root --timeout 450
+      - name: Wait for root app to be healthy
+        run: argocd app wait root --health --timeout 450
+      - name: Application summary
+        if: always()
+        run: |
+          argocd app get root -o json > root.json
+          {
+            echo "## ArgoCD root app"
+            echo
+            echo "| Application | Sync | Health | Revision |"
+            echo "| --- | --- | --- | --- |"
+            jq -r '"| \(.metadata.name) | \(.status.sync.status // "Unknown") | \(.status.health.status // "Unknown") | \((.status.sync.revision // "-")[0:7]) |"' root.json
+          } >> "$GITHUB_STEP_SUMMARY"
