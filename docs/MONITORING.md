@@ -28,6 +28,13 @@ default Kubernetes dashboards (cluster, nodes, pods, namespaces, and so on).
 Dashboards you build in the UI are saved in Grafana's database on its Longhorn
 volume, so they survive restarts.
 
+### LAN access
+
+Grafana's Service is a `LoadBalancer`, so Cilium gives it a LAN IP (pinned to
+`10.0.40.201` with the `lbipam.cilium.io/ips` annotation) and answers ARP for it.
+From any machine on the LAN open http://10.0.40.201. After login Grafana redirects
+to the public hostname, because `root_url` is set to it.
+
 ### 1. Create the admin Secret by hand
 
 Like the Cloudflare token, the admin login is not in git. Grafana's pod stays in

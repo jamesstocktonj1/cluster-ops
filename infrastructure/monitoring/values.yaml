@@ -24,10 +24,20 @@ grafana:
     storageClassName: longhorn
     accessModes: [ReadWriteOnce]
     size: 5Gi
+  # Also reachable on the LAN: Cilium hands this Service an IP from its pool
+  # (infrastructure/cilium/config/ip-pool.yaml) and answers ARP for it. The
+  # annotation pins the address so a bookmark keeps working. It must be inside the
+  # pool and not used by another Service. Plain HTTP; the Cloudflare route is separate.
+  service:
+    type: LoadBalancer
+    port: 80
+    annotations:
+      lbipam.cilium.io/ips: "10.0.40.201"
   grafana.ini:
     server:
       # Must match the public hostname, or redirects and links point at the
-      # in-cluster address.
+      # in-cluster address. Side effect: logging in via the LAN IP redirects to
+      # this hostname afterwards.
       root_url: https://k8smetrics.jamesstockton.com
     users:
       allow_sign_up: false

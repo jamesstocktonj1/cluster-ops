@@ -1,0 +1,24 @@
+# Puts the Argo CD UI/API on a LAN IP from the pool in ip-pool.yaml. Cilium assigns
+# the address and announces it (l2-policy.yaml). TLS is Argo CD's own self-signed
+# certificate, so the browser will warn: https://10.0.40.202
+#
+# This is another Service for the same pods, like the Tailscale one in
+# infrastructure/tailscale/config/argocd.yaml, so the bootstrap Helm install of
+# Argo CD is untouched.
+apiVersion: v1
+kind: Service
+metadata:
+  name: argocd-server-lan
+  namespace: argocd   # explicit: this app's default namespace is kube-system
+  annotations:
+    # Pinned so the address never changes. Must be inside the pool and unused.
+    lbipam.cilium.io/ips: "10.0.40.202"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: argocd-server
+  ports:
+    - name: https
+      port: 443
+      targetPort: 8080
+      protocol: TCP

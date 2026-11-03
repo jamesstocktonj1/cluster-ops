@@ -109,6 +109,13 @@ If `EXTERNAL-IP` stays `<pending>`, check
 If it has an IP but the LAN can't reach it, check
 `kubectl get ciliuml2announcementpolicy` and the node NIC name (`ens18`).
 
+## LAN access
+
+[infrastructure/cilium/config/argocd-lb.yaml](../infrastructure/cilium/config/argocd-lb.yaml)
+adds a second Service for the Argo CD server with the pinned LAN IP `10.0.40.202`.
+Open https://10.0.40.202 and accept the self-signed certificate warning. The
+Cloudflare Access route is unaffected.
+
 ## Day to day
 
 - **Change something:** edit the file, push, and Argo applies it (about 3 minutes,
