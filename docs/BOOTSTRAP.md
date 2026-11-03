@@ -2,7 +2,7 @@
 
 How to take four blank Talos VMs to a working Kubernetes cluster with Cilium.
 Run every command from the repo root unless a step says otherwise.
-The cluster is 4 nodes: 1 control plane and 3 workers.
+The cluster is 5 nodes: 1 control plane and 4 workers (all 4GB RAM).
 
 **Scope:** this covers Talos + Cilium. Next is [ARGOCD.md](ARGOCD.md), then [CLOUDFLARE.md](CLOUDFLARE.md) and
 [STORAGE.md](STORAGE.md). Workloads are not written yet (see [Not covered yet](#not-covered-yet)).
@@ -13,6 +13,7 @@ The cluster is 4 nodes: 1 control plane and 3 workers.
 | talos-wk-01 | 10.0.40.31 | worker        |
 | talos-wk-02 | 10.0.40.32 | worker        |
 | talos-wk-03 | 10.0.40.33 | worker        |
+| talos-wk-04 | 10.0.40.34 | worker        |
 
 The source of truth is [talos/talconfig.yaml](../talos/talconfig.yaml).
 

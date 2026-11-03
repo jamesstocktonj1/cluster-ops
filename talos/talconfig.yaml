@@ -89,3 +89,8 @@ nodes:
     ipAddress: 10.0.40.33
     controlPlane: false
     installDisk: /dev/sda
+
+  - hostname: talos-wk-04
+    ipAddress: 10.0.40.34
+    controlPlane: false
+    installDisk: /dev/sda

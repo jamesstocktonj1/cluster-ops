@@ -14,7 +14,7 @@ Each worker gets a second virtual disk (64GB). Talos formats it and mounts it at
 `/var/mnt/longhorn`. Longhorn stores replicas there. The ~16GB system disk is
 untouched, so apps can't fill the OS.
 
-Capacity: 3 workers x 64GB raw is about 96GB usable with 2 replicas, minus a 10%
+Capacity: 4 workers x 64GB raw is about 128GB usable with 2 replicas, minus a 10%
 reserve per disk.
 
 Replication protects against a disk or VM failing. It is **not a backup**: deleting
@@ -42,7 +42,7 @@ Pushing `apps/longhorn.yaml` before the nodes are ready makes the Longhorn pods 
 
 ### 1. Add a 64GB disk to each worker (Proxmox)
 
-Add it to talos-wk-01, -02 and -03 only. Use the same controller type as the
+Add it to talos-wk-01 to -04 only. Use the same controller type as the
 existing disk. Check each node sees it:
 
 ```bash

@@ -13,7 +13,7 @@ GitOps: push to `main` and Argo CD applies it.
 ├──────────────────────────────────────────────────────────────────────────┤
 │  PLATFORM   Cilium (network, LB)          Longhorn (storage)             │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  KUBERNETES v1.35 - 1 control plane + 3 workers                          │
+│  KUBERNETES v1.35 - 1 control plane + 4 workers                          │
 ├──────────────────────────────────────────────────────────────────────────┤
 │  OS         Talos Linux - immutable, API-managed, no SSH                 │
 ├──────────────────────────────────────────────────────────────────────────┤
