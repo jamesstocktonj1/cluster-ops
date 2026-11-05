@@ -1,0 +1,36 @@
+# Puts Pi-hole's DNS on the tailnet as pihole.<tailnet>.ts.net, so devices away from
+# home can use it too (set it as a nameserver in the Tailscale admin console, see
+# docs/PIHOLE.md). The operator starts a proxy pod for this Service; it forwards
+# to the Service's cluster IP, so queries are spread across the 3 Pi-hole pods.
+#
+# This is a second Service for the same pods as the Cilium LAN one in
+# infrastructure/pihole/values.yaml. It lives here, not in the Pi-hole chart, because
+# it is Tailscale configuration. The namespace is explicit: this app's default is argocd.
+#
+# Caveat: pods see the proxy pod's IP as the client, not the tailnet device, so the
+# Pi-hole dashboard shows these queries as coming from one client.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-dns-tailscale
+  namespace: pihole
+  annotations:
+    tailscale.com/hostname: pihole
+    tailscale.com/tags: "tag:k8s"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: tailscale
+  # Same labels the Pi-hole chart puts on its pods.
+  selector:
+    app: pihole
+    release: pihole
+  # DNS uses UDP normally and falls back to TCP for large answers, so expose both.
+  ports:
+    - name: dns-udp
+      port: 53
+      targetPort: 53
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      targetPort: 53
+      protocol: TCP
