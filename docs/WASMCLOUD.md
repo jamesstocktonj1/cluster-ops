@@ -46,7 +46,7 @@ One Helm chart, `runtime-operator`, installs all of it into the `wasmcloud` name
 
 ### 1. Check the chart version
 
-Docs pinned `2.11.0` when this was written. Check for newer:
+Docs pinned `2.12.0` when this was written. Check for newer:
 
 ```bash
 helm show chart oci://ghcr.io/wasmcloud/charts/runtime-operator | grep -E '^(version|appVersion)'
@@ -58,7 +58,7 @@ Edit `targetRevision` in `apps/wasmcloud.yaml` if needed.
 
 ```bash
 helm template wasmcloud oci://ghcr.io/wasmcloud/charts/runtime-operator \
-  --version 2.11.0 -n wasmcloud -f infrastructure/wasmcloud/values.yaml | less
+  --version 2.12.0 -n wasmcloud -f infrastructure/wasmcloud/values.yaml | less
 ```
 
 Confirm there is no gateway, and that the host group renders with 3 replicas. The
