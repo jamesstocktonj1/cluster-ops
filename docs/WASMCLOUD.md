@@ -39,6 +39,14 @@ One Helm chart, `runtime-operator`, installs all of it into the `wasmcloud` name
 - **NATS storage is an emptyDir.** Restarting NATS loses JetStream state. Hosts
   re-register and the operator reconciles workloads from the CRDs in git/etcd, but
   anything you stored in NATS object storage is gone. Fine for experimenting.
+- **TLS certs are not rotated by Argo.** The chart generates its CA and certs at
+  render time and only reuses existing ones through Helm `lookup`, which Argo's
+  offline render can't do, so each sync would mint a new CA and hosts would fail with
+  `invalid peer certificate: BadSignature`. `apps/wasmcloud.yaml` therefore ignores
+  `/data` on the five `wasmcloud-*` TLS Secrets (with `RespectIgnoreDifferences`).
+  To rotate on purpose: delete the Secrets, sync, then
+  `kubectl rollout restart deploy -n wasmcloud nats runtime-operator hostgroup-default`.
+  Certs are valid 365 days.
 - **No prune** on the Application, so a bad commit can't delete the CRDs (which would
   delete every workload).
 
