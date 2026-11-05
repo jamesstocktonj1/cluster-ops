@@ -21,6 +21,31 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: wasmcloud
+  # The chart mints its CA and TLS certs with genCA/genSignedCert and only reuses
+  # the live ones via Helm `lookup`, which Argo's offline render cannot do. Without
+  # this, every sync rotates the CA and breaks NATS TLS for running pods
+  # (BadSignature). Keep the live Secret data; see docs/WASMCLOUD.md.
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: wasmcloud-ca
+      jsonPointers: [/data]
+    - group: ""
+      kind: Secret
+      name: wasmcloud-nats-tls
+      jsonPointers: [/data]
+    - group: ""
+      kind: Secret
+      name: wasmcloud-operator-tls
+      jsonPointers: [/data]
+    - group: ""
+      kind: Secret
+      name: wasmcloud-runtime-tls
+      jsonPointers: [/data]
+    - group: ""
+      kind: Secret
+      name: wasmcloud-data-tls
+      jsonPointers: [/data]
   syncPolicy:
     automated:
       selfHeal: true
@@ -28,3 +53,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true   # needed for ignoreDifferences to apply on sync, not just in the diff
