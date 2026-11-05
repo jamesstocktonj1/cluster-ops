@@ -10,7 +10,7 @@ spec:
   sources:
     - repoURL: ghcr.io/wasmcloud/charts   # OCI registry: no oci:// prefix in Argo
       chart: runtime-operator
-      targetRevision: 2.11.0   # bump to upgrade; read the release notes first
+      targetRevision: 2.12.0   # bump to upgrade; read the release notes first
       helm:
         releaseName: wasmcloud
         valueFiles:
