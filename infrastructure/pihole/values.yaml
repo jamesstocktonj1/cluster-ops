@@ -92,6 +92,20 @@ adlists:
 persistentVolumeClaim:
   enabled: false
 
+# --- Metrics ------------------------------------------------------------------
+# Pi-hole has no Prometheus endpoint of its own. The chart can add an "exporter"
+# container to every pod (ekofr/pihole-exporter) that logs in to that pod's Pi-hole
+# API with the admin password above and republishes the stats on port 9617.
+# The PodMonitor tells Prometheus (infrastructure/monitoring) to scrape it. It is
+# created in this namespace; Prometheus is set up to find monitors in any namespace.
+# Each replica is scraped separately, so every series carries a `pod` label.
+monitoring:
+  sidecar:
+    enabled: true
+  podMonitor:
+    enabled: true
+    interval: 30s
+
 # Small and steady; requests also help the scheduler place them.
 resources:
   requests:

@@ -103,9 +103,43 @@ kubectl -n pihole port-forward pod/<pod-name> 8080:80
 
 Then open <http://localhost:8080/admin>.
 
+## Metrics
+
+Pi-hole has no Prometheus endpoint itself, so each pod runs a second container,
+`exporter` ([ekofr/pihole-exporter](https://github.com/eko/pihole-exporter)), that
+reads that pod's Pi-hole API and serves it on port 9617. A `PodMonitor` made by the
+chart makes Prometheus scrape it every 30s ([MONITORING.md](MONITORING.md)). Check
+[http://localhost:9090/targets](http://localhost:9090/targets) (port-forward in
+MONITORING.md) for `podMonitor/pihole/pihole-prometheus-exporter` with 3 targets up.
+
+Useful series (all have a `pod` label; sum or `avg by` across replicas):
+
+| Metric | Meaning |
+| --- | --- |
+| `pihole_dns_queries_today` | queries handled |
+| `pihole_ads_blocked_today` | queries blocked |
+| `pihole_ads_percentage_today` | percent blocked |
+| `pihole_domains_being_blocked` | size of the loaded block lists |
+| `pihole_unique_clients` | distinct clients seen |
+| `pihole_status` | 1 = blocking enabled |
+| `pihole_queries_forwarded` / `pihole_queries_cached` | forwarded upstream vs answered from cache |
+
+Exact names vary a little by exporter version; browse them in Prometheus by typing
+`pihole_`. Because pods have no volume, the "today" counters reset when a pod
+restarts. For rates use `rate()` over them rather than the raw value.
+
+Two useful alerts-to-be: `sum(pihole_status) < 3` (a replica not blocking or down) and
+`up{namespace="pihole"} == 0`. There is no Alertmanager yet, so these
+are only for graphs for now.
+
+Note: the chart also lists port 9617 on the DNS Service, so the metrics are readable
+on the LAN at `10.0.40.203:9617`. Harmless on a LAN-only network, but not private.
+The exporter logs in to Pi-hole each scrape, which shows in its session list.
+
 ## Changing the admin password
 
-Update the Secret, then `kubectl -n pihole rollout restart deployment pihole`.
+Update the Secret, then `kubectl -n pihole rollout restart deployment pihole`. The
+exporter reads the same Secret, so it picks up the new password on restart too.
 
 ## Troubleshooting
 
