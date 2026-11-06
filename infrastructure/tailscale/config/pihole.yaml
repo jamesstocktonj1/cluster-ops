@@ -1,7 +1,7 @@
 # Puts Pi-hole's DNS on the tailnet as pihole.<tailnet>.ts.net, so devices away from
 # home can use it too (set it as a nameserver in the Tailscale admin console, see
 # docs/PIHOLE.md). The operator starts a proxy pod for this Service; it forwards
-# to the Service's cluster IP, so queries are spread across the 3 Pi-hole pods.
+# to the Service's cluster IP, so queries are spread across all 3 Pi-hole pods.
 #
 # This is a second Service for the same pods as the Cilium LAN one in
 # infrastructure/pihole/values.yaml. It lives here, not in the Pi-hole chart, because
@@ -20,10 +20,9 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale
-  # Same labels the Pi-hole chart puts on its pods.
+  # Label the Pi-hole chart puts on its pods; `app` alone matches all three releases.
   selector:
     app: pihole
-    release: pihole
   # DNS uses UDP normally and falls back to TCP for large answers, so expose both.
   ports:
     - name: dns-udp

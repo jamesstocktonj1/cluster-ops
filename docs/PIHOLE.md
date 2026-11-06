@@ -1,23 +1,36 @@
 # Pi-hole
 
 Continues from [ARGOCD.md](ARGOCD.md) (Cilium hands out the LAN IP). Runs three
-Pi-hole replicas behind one DNS address, `10.0.40.203`.
+independent Pi-holes, each with its own LAN IP.
+
+| Pi-hole | DNS | Web UI |
+| --- | --- | --- |
+| `pihole-1` | `10.0.40.203` | <http://10.0.40.204/admin> |
+| `pihole-2` | `10.0.40.205` | <http://10.0.40.206/admin> |
+| `pihole-3` | `10.0.40.207` | <http://10.0.40.208/admin> |
 
 ## How it works
 
 ```
-LAN device -> 10.0.40.203:53 (Cilium LB, UDP+TCP) -> one of 3 Pi-hole pods (one per worker)
-                                                          |
-                                           blocked? answer 0.0.0.0 : forward to 1.1.1.1
+LAN device -> 10.0.40.203 / .205 / .207 :53 (one Cilium LB IP each, UDP+TCP)
+           -> that Pi-hole's pod (the three pods are on different workers)
+                                  |
+                   blocked? answer 0.0.0.0 : forward to 1.1.1.1
 ```
 
-- [apps/pihole.yaml](../apps/pihole.yaml): the `pihole` chart from
-  <https://mojo2600.github.io/pihole-kubernetes/>, version pinned.
+- [apps/pihole.yaml](../apps/pihole.yaml): an ApplicationSet that installs the `pihole`
+  chart from <https://mojo2600.github.io/pihole-kubernetes/> (version pinned) three
+  times, as releases `pihole-1`, `pihole-2`, `pihole-3`. The only per-Pi-hole settings,
+  the two IPs, are listed here.
 - [infrastructure/pihole/values.yaml](../infrastructure/pihole/values.yaml): all
   settings, commented.
-- One Deployment with 3 replicas, spread across workers. One Service of type
-  `LoadBalancer` with the IP pinned by `lbipam.cilium.io/ips`; Cilium answers ARP for
-  it from a worker that runs a Pi-hole pod (`externalTrafficPolicy: Local`).
+- Each release is one Deployment with 1 pod, spread across workers. Each has its own
+  `LoadBalancer` Services with IPs pinned by `lbipam.cilium.io/ips`; Cilium answers
+  ARP for an IP from the worker that runs that pod (`externalTrafficPolicy: Local`).
+  A Deployment cannot give each of its replicas its own Service, which is why these
+  are three releases rather than `replicaCount: 3`.
+- To add a fourth, add an entry to the list in `apps/pihole.yaml` with two free IPs
+  from the pool (and note the spread rule then needs 4 workers).
 - The three Pi-holes do not talk to each other. They are identical only because they
   are configured from the same file.
 
@@ -26,11 +39,11 @@ LAN device -> 10.0.40.203:53 (Cilium LB, UDP+TCP) -> one of 3 Pi-hole pods (one 
 - **No persistent volume.** The query log and anything changed in the web UI reset
   when a pod restarts. Block lists, upstream DNS and so on belong in the values
   file. This is what lets three pods run on three nodes without sharing a volume.
-- **Dashboards are per replica.** A query only shows up on the replica that served
-  it, and Cilium picks one per connection.
-- **The web UI shows one replica.** It is on its own LAN IP (`10.0.40.204`), but you
-  only see the replica on the node announcing that IP. Use a port-forward to look at
-  a specific one (below).
+- **Dashboards are per Pi-hole.** A query only shows up on the Pi-hole whose IP the
+  client asked. Each has its own web UI IP (table above).
+- **No automatic load balancing or failover.** A client only fails over if it is
+  given several DNS servers, so hand out all three IPs (step 4). Some devices use
+  only the first one or two.
 - **DNS is a dependency of the cluster.** Argo CD fetches Helm charts and images by
   name. Don't point the *nodes'* DNS at this IP; keep the router/Talos resolvers
   independent so a Pi-hole outage cannot stop you fixing Pi-hole.
@@ -55,24 +68,29 @@ unset PASS
 Merge to `main`; Argo CD creates the `pihole` app. Then check:
 
 ```bash
+kubectl -n argocd get applications | grep pihole   # pihole-1, -2, -3
 kubectl -n pihole get pods -o wide        # 3 Running, each on a different node
-kubectl -n pihole get svc                 # pihole-dns-... EXTERNAL-IP 10.0.40.203
+kubectl -n pihole get svc                 # each pihole-N-... has its own EXTERNAL-IP
 ```
 
 ### 3. Test it
 
 ```bash
-dig @10.0.40.203 example.com              # resolves
-dig @10.0.40.203 doubleclick.net          # 0.0.0.0 = blocked
+for ip in 10.0.40.203 10.0.40.205 10.0.40.207; do
+  dig @$ip example.com +short             # resolves
+  dig @$ip doubleclick.net +short         # 0.0.0.0 = blocked
+done
 ```
 
-Failover: `kubectl -n pihole delete pod <one pod>`; the `dig` keeps working.
+Failover: `kubectl -n pihole delete pod <one pod>`; that IP is briefly down and the
+other two keep answering.
 
 ### 4. Point the LAN at it
 
-In the router's DHCP settings, set the DNS server to `10.0.40.203`. Keep a secondary
-that is not Pi-hole (e.g. `1.1.1.1`) if you want browsing to survive a full outage,
-at the cost of some devices bypassing the blocking.
+In the router's DHCP settings, set the DNS servers to `10.0.40.203`, `10.0.40.205`
+and `10.0.40.207` (if the router only takes two, use two). Adding a non-Pi-hole
+server (e.g. `1.1.1.1`) would let browsing survive a full outage, at the cost of some
+devices bypassing the blocking.
 
 ### 5. Reach it over Tailscale (away from home)
 
@@ -93,8 +111,9 @@ queries show in Pi-hole as one client (the proxy pod).
 
 ## Web UI
 
-On the LAN: <http://10.0.40.204/admin> (or https, accepting the certificate warning).
-Log in with the password from step 1. To look at a specific replica instead:
+On the LAN: see the table at the top (or https, accepting the certificate warning).
+Log in with the password from step 1 (all three share it). The other two are at
+`10.0.40.206` and `10.0.40.208`. Or use a port-forward:
 
 ```bash
 kubectl -n pihole get pods
@@ -133,12 +152,13 @@ Two useful alerts-to-be: `sum(pihole_status) < 3` (a replica not blocking or dow
 are only for graphs for now.
 
 Note: the chart also lists port 9617 on the DNS Service, so the metrics are readable
-on the LAN at `10.0.40.203:9617`. Harmless on a LAN-only network, but not private.
+on the LAN at each DNS IP, e.g. `10.0.40.203:9617`. Harmless on a LAN-only network, but not private.
 The exporter logs in to Pi-hole each scrape, which shows in its session list.
 
 ## Changing the admin password
 
-Update the Secret, then `kubectl -n pihole rollout restart deployment pihole`. The
+Update the Secret, then
+`for n in 1 2 3; do kubectl -n pihole rollout restart deployment pihole-$n; done`. The
 exporter reads the same Secret, so it picks up the new password on restart too.
 
 ## Troubleshooting
@@ -150,3 +170,6 @@ exporter reads the same Secret, so it picks up the new password on restart too.
 - **Timeouts from some LAN devices only**: with `externalTrafficPolicy: Local`, the
   announcing node must have a pod. Check
   `kubectl get ciliuml2announcementpolicy` and that the pods are on workers.
+- **Moving from the old single-IP setup**: the old `pihole` app is replaced by
+  `pihole-1`..`3`. Delete the old `pihole` Application in Argo CD if it lingers; it
+  holds `.203` until it is gone, so `pihole-1` may sit on `<pending>` briefly.

@@ -1,32 +1,61 @@
-# Pi-hole DNS ad blocker: 3 replicas behind one Cilium LAN IP. See docs/PIHOLE.md.
+# Pi-hole DNS ad blocker: 3 separate Pi-holes (pihole-1, -2, -3), each on its own Cilium
+# LAN IP. See docs/PIHOLE.md. One ApplicationSet makes one Argo app and one Helm release
+# per list entry; shared settings are in infrastructure/pihole/values.yaml, and only the
+# IPs differ. IPs must be inside the pool (infrastructure/cilium/config/ip-pool.yaml)
+# and unused: .201 Grafana, .202 Argo CD.
 apiVersion: argoproj.io/v1alpha1
-kind: Application
+kind: ApplicationSet
 metadata:
   name: pihole
   namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "2"   # after cilium (0) and cilium-config (1), which hand out the IP
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
 spec:
-  project: default
-  sources:
-    - repoURL: https://mojo2600.github.io/pihole-kubernetes/
-      chart: pihole
-      targetRevision: 2.38.0   # bump to upgrade; read the release notes first
-      helm:
-        releaseName: pihole
-        valueFiles:
-          - $values/infrastructure/pihole/values.yaml
-    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
-      targetRevision: main
-      ref: values
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: pihole
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-    syncOptions:
-      - CreateNamespace=true
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - name: pihole-1
+            dnsIp: 10.0.40.203
+            webIp: 10.0.40.204
+          - name: pihole-2
+            dnsIp: 10.0.40.205
+            webIp: 10.0.40.206
+          - name: pihole-3
+            dnsIp: 10.0.40.207
+            webIp: 10.0.40.208
+  template:
+    metadata:
+      name: '{{.name}}'
+      annotations:
+        argocd.argoproj.io/sync-wave: "2"   # after cilium (0) and cilium-config (1), which hand out the IPs
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+    spec:
+      project: default
+      sources:
+        - repoURL: https://mojo2600.github.io/pihole-kubernetes/
+          chart: pihole
+          targetRevision: 2.38.0   # bump to upgrade; read the release notes first
+          helm:
+            releaseName: '{{.name}}'
+            valueFiles:
+              - $values/infrastructure/pihole/values.yaml
+            valuesObject:
+              serviceDns:
+                annotations:
+                  lbipam.cilium.io/ips: '{{.dnsIp}}'
+              serviceWeb:
+                annotations:
+                  lbipam.cilium.io/ips: '{{.webIp}}'
+        - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+          targetRevision: main
+          ref: values
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: pihole
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
