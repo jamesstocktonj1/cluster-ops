@@ -21,10 +21,6 @@ spec:
     - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
       targetRevision: main
       ref: values
-    # Extra StorageClasses that keep both replicas on one Proxmox host (docs/TOPOLOGY.md).
-    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
-      targetRevision: main
-      path: infrastructure/longhorn/config
   destination:
     server: https://kubernetes.default.svc
     namespace: longhorn-system

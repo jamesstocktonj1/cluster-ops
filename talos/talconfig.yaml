@@ -72,14 +72,11 @@ worker:
 #
 # Each VM runs on one of two Proxmox hosts. Traffic between VMs on the same host
 # stays on its virtual bridge (10G+); traffic between hosts crosses a 1G link. The
-# zone label records the host, so the scheduler, Cilium, Envoy and Longhorn can keep
+# zone label records the host, so the scheduler, Cilium and Envoy can keep
 # traffic on one host where possible (docs/TOPOLOGY.md):
 #   stack     - talos-cp-01, talos-wk-01, talos-wk-04
 #   stacklite - talos-wk-02, talos-wk-03
-# The Longhorn annotation gives each worker a node tag of the same name, used by the
-# longhorn-stack/longhorn-stacklite StorageClasses. Longhorn reads it only while a
-# node has no tags, so after that change tags in the Longhorn UI, not here.
-# If you move a VM to the other host, change both lines for it.
+# If you move a VM to the other host, change its label here.
 nodes:
   - hostname: talos-cp-01
     ipAddress: 10.0.40.30
@@ -94,8 +91,6 @@ nodes:
     installDisk: /dev/sda
     nodeLabels:
       topology.kubernetes.io/zone: stack
-    nodeAnnotations:
-      node.longhorn.io/default-node-tags: '["stack"]'
 
   - hostname: talos-wk-02
     ipAddress: 10.0.40.32
@@ -103,8 +98,6 @@ nodes:
     installDisk: /dev/sda
     nodeLabels:
       topology.kubernetes.io/zone: stacklite
-    nodeAnnotations:
-      node.longhorn.io/default-node-tags: '["stacklite"]'
 
   - hostname: talos-wk-03
     ipAddress: 10.0.40.33
@@ -112,8 +105,6 @@ nodes:
     installDisk: /dev/sda
     nodeLabels:
       topology.kubernetes.io/zone: stacklite
-    nodeAnnotations:
-      node.longhorn.io/default-node-tags: '["stacklite"]'
 
   - hostname: talos-wk-04
     ipAddress: 10.0.40.34
@@ -121,5 +112,3 @@ nodes:
     installDisk: /dev/sda
     nodeLabels:
       topology.kubernetes.io/zone: stack
-    nodeAnnotations:
-      node.longhorn.io/default-node-tags: '["stack"]'
