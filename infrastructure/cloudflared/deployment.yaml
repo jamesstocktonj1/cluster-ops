@@ -19,6 +19,16 @@ spec:
       labels:
         app: cloudflared
     spec:
+      # One replica per Proxmox host, so the tunnel stays up if a whole host goes
+      # down. ScheduleAnyway so a rollout is never blocked while a host is down.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: cloudflared
       containers:
         - name: cloudflared
           image: cloudflare/cloudflared:2026.10.3

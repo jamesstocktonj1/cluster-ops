@@ -17,7 +17,7 @@ GitOps: push to `main` and Argo CD applies it.
 ├──────────────────────────────────────────────────────────────────────────┤
 │  OS         Talos Linux - immutable, API-managed, no SSH                 │
 ├──────────────────────────────────────────────────────────────────────────┤
-│  HARDWARE   Proxmox - 4 VMs                                              │
+│  HARDWARE   Proxmox - 2 hosts, 5 VMs                                     │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -29,6 +29,9 @@ GitOps: push to `main` and Argo CD applies it.
   `LoadBalancer` Services.
 - **Argo CD**: watches [apps/](apps/) and deploys everything else.
 - **Longhorn**: replicated persistent volumes across the workers.
+- **Topology**: the VMs run on two Proxmox hosts joined by a 1G link. Nodes carry
+  their host as a zone label, and placement and routing prefer the same host. See
+  [docs/TOPOLOGY.md](docs/TOPOLOGY.md).
 - **Envoy Gateway**: Gateway API ingress with path-based routing.
 - **Cloudflare Tunnel**: public access with no open ports on the router.
 - **Tailscale operator**: private access to the cluster, including Argo CD from

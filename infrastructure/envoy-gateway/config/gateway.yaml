@@ -21,8 +21,28 @@ spec:
         annotations:
           tailscale.com/hostname: apps
           tailscale.com/tags: "tag:k8s"
+        # The Tailscale proxy reaches Envoy through this Service's ClusterIP. Prefer
+        # the Envoy pod on the proxy's own Proxmox host (docs/TOPOLOGY.md).
+        patch:
+          type: StrategicMerge
+          value:
+            spec:
+              trafficDistribution: PreferSameZone
       envoyDeployment:
         replicas: 2
+        # One Envoy per Proxmox host: apps stay up if a host goes down, and each
+        # host has a local Envoy for the Service above to prefer. ScheduleAnyway so a
+        # rollout is never blocked while a host is down.
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: topology.kubernetes.io/zone
+              whenUnsatisfiable: ScheduleAnyway
+              nodeTaintsPolicy: Honor
+              labelSelector:
+                matchLabels:
+                  gateway.envoyproxy.io/owning-gateway-name: shared
+                  gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

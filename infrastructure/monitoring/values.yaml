@@ -52,6 +52,18 @@ grafana:
       memory: 256Mi
     limits:
       memory: 1Gi
+  # Every dashboard query goes to Prometheus, so prefer the same Proxmox host as it
+  # (docs/TOPOLOGY.md). Only a preference: Grafana still starts elsewhere if that
+  # host is full or down.
+  affinity:
+    podAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: topology.kubernetes.io/zone
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: prometheus
 
 alertmanager:
   enabled: false

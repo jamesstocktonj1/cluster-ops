@@ -27,7 +27,7 @@ One Helm chart, `runtime-operator`, installs all of it into the `wasmcloud` name
 | File | Purpose |
 | ---- | ------- |
 | `apps/wasmcloud.yaml` | Argo CD Application (OCI chart, version pinned here) |
-| `infrastructure/wasmcloud/values.yaml` | Gateway off, `default` host group with 3 hosts |
+| `infrastructure/wasmcloud/values.yaml` | Gateway off, `default` host group with 4 hosts (one per worker) |
 
 ## Notes specific to this cluster
 
@@ -96,7 +96,7 @@ kubectl get crd | grep wasmcloud
 kubectl get hosts.runtime.wasmcloud.dev -A
 ```
 
-You should see 3 hosts, all in the `default` host group. (CRD group is
+You should see 4 hosts, all in the `default` host group. (CRD group is
 `runtime.wasmcloud.dev`.)
 
 ### 5. Deploy a test workload

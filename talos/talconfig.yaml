@@ -69,28 +69,46 @@ worker:
 # Node IPs come from DHCP reservations on the router, so the machine config has
 # no static network section. If a recreated VM gets a new MAC, update its
 # reservation or the IPs below will be wrong.
+#
+# Each VM runs on one of two Proxmox hosts. Traffic between VMs on the same host
+# stays on its virtual bridge (10G+); traffic between hosts crosses a 1G link. The
+# zone label records the host, so the scheduler, Cilium and Envoy can keep
+# traffic on one host where possible (docs/TOPOLOGY.md):
+#   stack     - talos-cp-01, talos-wk-01, talos-wk-04
+#   stacklite - talos-wk-02, talos-wk-03
+# If you move a VM to the other host, change its label here.
 nodes:
   - hostname: talos-cp-01
     ipAddress: 10.0.40.30
     controlPlane: true
     installDisk: /dev/sda
+    nodeLabels:
+      topology.kubernetes.io/zone: stack
 
   - hostname: talos-wk-01
     ipAddress: 10.0.40.31
     controlPlane: false
     installDisk: /dev/sda
+    nodeLabels:
+      topology.kubernetes.io/zone: stack
 
   - hostname: talos-wk-02
     ipAddress: 10.0.40.32
     controlPlane: false
     installDisk: /dev/sda
+    nodeLabels:
+      topology.kubernetes.io/zone: stacklite
 
   - hostname: talos-wk-03
     ipAddress: 10.0.40.33
     controlPlane: false
     installDisk: /dev/sda
+    nodeLabels:
+      topology.kubernetes.io/zone: stacklite
 
   - hostname: talos-wk-04
     ipAddress: 10.0.40.34
     controlPlane: false
     installDisk: /dev/sda
+    nodeLabels:
+      topology.kubernetes.io/zone: stack
