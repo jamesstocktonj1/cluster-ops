@@ -6,7 +6,7 @@ Pi-hole replicas behind one DNS address, `10.0.40.203`.
 ## How it works
 
 ```
-LAN device -> 10.0.40.203:53 (Cilium LB, UDP+TCP) -> one of 3 Pi-hole pods (one per worker)
+LAN device -> 10.0.40.203:53 (Cilium LB, UDP+TCP) -> any of 3 Pi-hole pods (one per worker)
                                                           |
                                            blocked? answer 0.0.0.0 : forward to 1.1.1.1
 ```
@@ -16,8 +16,9 @@ LAN device -> 10.0.40.203:53 (Cilium LB, UDP+TCP) -> one of 3 Pi-hole pods (one 
 - [infrastructure/pihole/values.yaml](../infrastructure/pihole/values.yaml): all
   settings, commented.
 - One Deployment with 3 replicas, spread across workers. One Service of type
-  `LoadBalancer` with the IP pinned by `lbipam.cilium.io/ips`; Cilium answers ARP for
-  it from a worker that runs a Pi-hole pod (`externalTrafficPolicy: Local`).
+  `LoadBalancer` with the IP pinned by `lbipam.cilium.io/ips`. One worker answers ARP
+  for it and receives all queries; with `externalTrafficPolicy: Cluster`, Cilium there
+  load-balances each flow across all three pods, so the replicas share the load.
 - The three Pi-holes do not talk to each other. They are identical only because they
   are configured from the same file.
 
@@ -27,7 +28,12 @@ LAN device -> 10.0.40.203:53 (Cilium LB, UDP+TCP) -> one of 3 Pi-hole pods (one 
   when a pod restarts. Block lists, upstream DNS and so on belong in the values
   file. This is what lets three pods run on three nodes without sharing a volume.
 - **Dashboards are per replica.** A query only shows up on the replica that served
-  it, and Cilium picks one per connection.
+  it, and Cilium picks one per flow, so each replica sees roughly a third.
+- **Client IPs are partly hidden.** Queries Cilium forwards to a pod on another node
+  are SNATed, so they show the announcing node's IP as the client. Only queries
+  served by the pod on the announcing node keep the real device IP. Switching back
+  to `externalTrafficPolicy: Local` restores client IPs but sends all LAN DNS to one
+  pod; Cilium DSR mode would give both but needs native routing.
 - **The web UI shows one replica.** It is on its own LAN IP (`10.0.40.204`), but you
   only see the replica on the node announcing that IP. Use a port-forward to look at
   a specific one (below).
@@ -147,6 +153,7 @@ exporter reads the same Secret, so it picks up the new password on restart too.
   (`kubectl get ciliumloadbalancerippool`), or the annotation is mistyped.
 - **A pod is Pending**: the spread rule needs 3 schedulable workers. If one is down,
   the third pod waits until it returns (the other two still serve DNS).
-- **Timeouts from some LAN devices only**: with `externalTrafficPolicy: Local`, the
-  announcing node must have a pod. Check
+- **Timeouts from some LAN devices only**: check
   `kubectl get ciliuml2announcementpolicy` and that the pods are on workers.
+- **Is it spreading?** Run `for i in $(seq 50); do dig +short @10.0.40.203 example$i.com >/dev/null; done`,
+  then compare `pihole_dns_queries_today` per `pod` in Prometheus: all three should grow.

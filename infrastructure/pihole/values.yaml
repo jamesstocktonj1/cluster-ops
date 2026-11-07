@@ -41,10 +41,15 @@ serviceDns:
   # LoadBalancer, so they share a single IP (the chart's default is two Services).
   mixedService: true
   type: LoadBalancer
-  # Local = a node only accepts DNS if it runs a Pi-hole pod itself. That keeps the
-  # real client IP, so the Pi-hole dashboard shows which device asked, not a node.
-  # Cilium only announces the IP from nodes that have a pod, so this is safe.
-  externalTrafficPolicy: Local
+  # Cluster = spread queries over all 3 replicas. L2 announcements mean one worker
+  # receives every packet for the IP; with Cluster, Cilium on that worker picks a
+  # backend per flow (each query from a new source port is a new flow), so queries
+  # are shared out across the pods. With Local, that worker could only use its own
+  # pod and the other two sat idle.
+  # Cost: Cilium SNATs traffic it forwards to another node, so the Pi-hole dashboard
+  # shows a node IP as the client for those queries, not the LAN device. Per-device
+  # stats would need Cilium DSR mode (native routing), a larger CNI change.
+  externalTrafficPolicy: Cluster
   annotations:
     # Pinned so the address never changes: this is what goes in the router's DHCP
     # DNS setting. Must be inside the pool (infrastructure/cilium/config/ip-pool.yaml)
