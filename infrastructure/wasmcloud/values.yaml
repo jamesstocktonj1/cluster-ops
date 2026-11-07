@@ -5,7 +5,9 @@ gateway:
 runtime:
   hostGroups:
     - name: default     # WorkloadDeployments select this with hostSelector.hostgroup
-      replicas: 3       # one host pod per worker
+      # One host pod per worker, so two on each Proxmox host. The chart has no
+      # affinity or spread settings; the scheduler's default spreading places them.
+      replicas: 4
       service:
         type: ClusterIP
       http:

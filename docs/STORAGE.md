@@ -17,6 +17,11 @@ untouched, so apps can't fill the OS.
 Capacity: 4 workers x 64GB raw is about 128GB usable with 2 replicas, minus a 10%
 reserve per disk.
 
+The two replicas go on different Proxmox hosts where possible, and one stays on the
+node running the pod (data locality). Prometheus instead uses `longhorn-stacklite`,
+which keeps both replicas on one host to save the 1G link between hosts. See
+[TOPOLOGY.md](TOPOLOGY.md).
+
 Replication protects against a disk or VM failing. It is **not a backup**: deleting
 a PVC, or a bad application write, is replicated too. Backups are a later step.
 

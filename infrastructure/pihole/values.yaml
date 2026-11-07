@@ -14,10 +14,22 @@ maxUnavailable: 1
 # Put each replica on a different worker. If two shared a node and that node died,
 # you would lose two thirds of your DNS. DoNotSchedule makes this a hard rule.
 # The labels match the ones this chart puts on its pods.
+#
+# Also spread over the two Proxmox hosts (2 + 1), so losing a whole host still leaves
+# DNS running. That one is a preference (ScheduleAnyway): with a host down, the
+# replacement pod must still be able to start on the other host.
 topologySpreadConstraints:
   - maxSkew: 1
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: DoNotSchedule
+    labelSelector:
+      matchLabels:
+        app: pihole
+        release: pihole
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    nodeTaintsPolicy: Honor
     labelSelector:
       matchLabels:
         app: pihole

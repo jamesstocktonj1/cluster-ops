@@ -10,6 +10,18 @@ defaultSettings:
   defaultReplicaCount: 2
   # Keep this much of each disk free so Longhorn doesn't fill it completely.
   storageReservedPercentageForDefaultDisk: 10
+  # Keep one replica on the node running the pod, so reads never touch the network
+  # and each write crosses to only one other node.
+  defaultDataLocality: best-effort
+  # Nodes are labelled with their Proxmox host as topology.kubernetes.io/zone
+  # (talos/talconfig.yaml). Longhorn then puts the two replicas on different hosts
+  # when it can, so losing a whole host does not take a volume down. "Soft" still
+  # allows both on one host if the other has no room, and is what lets the
+  # longhorn-stack/longhorn-stacklite classes (config/) keep both on one host.
+  replicaZoneSoftAntiAffinity: true
+  # Move existing replicas when that is all it takes to spread them across hosts
+  # and nodes. Volumes made before the zone labels can have both copies on one host.
+  replicaAutoBalance: least-effort
 
 # Longhorn's pre-upgrade check is a Helm hook. Argo CD runs it before anything else
 # exists (no ServiceAccount yet), so it hangs and blocks the whole sync. The chart
@@ -21,5 +33,7 @@ persistence:
   # The StorageClass new PVCs use when they don't ask for one.
   defaultClass: true
   defaultClassReplicaCount: 2
+  # Same as defaultDataLocality above, for volumes made through this StorageClass.
+  defaultDataLocality: best-effort
   # Delete the volume's data when its PVC is deleted.
   reclaimPolicy: Delete

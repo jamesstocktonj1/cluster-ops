@@ -54,3 +54,12 @@ k8sClientRateLimit:
 # (docs/TAILSCALE.md). Needs a rollout restart of ds/cilium to take effect.
 socketLB:
   hostNamespaceOnly: true
+
+# --- Same-host routing ------------------------------------------------------------
+# Honour topology hints on EndpointSlices: for a Service with
+# `trafficDistribution: PreferSameZone`, send traffic to backends on the caller's own
+# Proxmox host (zone label, talos/talconfig.yaml) and only cross the 1G link when the
+# host has none (docs/TOPOLOGY.md). Services without it are unaffected.
+# Needs a rollout restart of ds/cilium to take effect.
+loadBalancer:
+  serviceTopology: true

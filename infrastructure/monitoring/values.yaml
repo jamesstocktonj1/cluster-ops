@@ -52,6 +52,18 @@ grafana:
       memory: 256Mi
     limits:
       memory: 1Gi
+  # Every dashboard query goes to Prometheus, so prefer the same Proxmox host as it
+  # (pinned to stacklite below). Only a preference: Grafana still starts elsewhere
+  # if that host is full or down.
+  affinity:
+    podAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            topologyKey: topology.kubernetes.io/zone
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: prometheus
 
 alertmanager:
   enabled: false
@@ -81,10 +93,25 @@ prometheus:
       requests:
         cpu: 200m
         memory: 1Gi
+    # Prometheus writes all the time and is the busiest volume in the cluster. Keep
+    # the pod and both replicas of its volume on the stacklite Proxmox host, so those
+    # writes never cross the 1G link between hosts (docs/TOPOLOGY.md). If the whole
+    # host is down, Prometheus waits for it: metrics are cheap to lose, dashboards in
+    # Grafana are not, and Grafana's volume is still spread over both hosts.
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: topology.kubernetes.io/zone
+                  operator: In
+                  values: [stacklite]
     storageSpec:
       volumeClaimTemplate:
         spec:
-          storageClassName: longhorn
+          # Both replicas on stacklite (infrastructure/longhorn/config). Changing this
+          # on a running Prometheus needs its PVC recreated: docs/TOPOLOGY.md.
+          storageClassName: longhorn-stacklite
           accessModes: [ReadWriteOnce]
           resources:
             requests:
