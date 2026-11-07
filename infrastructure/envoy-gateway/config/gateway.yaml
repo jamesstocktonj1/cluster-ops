@@ -43,6 +43,15 @@ spec:
                 matchLabels:
                   gateway.envoyproxy.io/owning-gateway-name: shared
                   gateway.envoyproxy.io/owning-gateway-namespace: envoy-gateway-system
+        # Default is a 512Mi request per replica with no limit; actual use is a few tens of Mi.
+        # Setting this replaces the defaults, so the CPU request is restated.
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              memory: 250Mi
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

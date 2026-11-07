@@ -15,6 +15,16 @@ spec:
     targetRevision: v1.9.2   # bump to upgrade; read the release notes first
     helm:
       releaseName: eg
+      valuesObject:
+        deployment:
+          envoyGateway:
+            # Chart default is 256Mi request / 1Gi limit; the controller idles well under 100Mi.
+            resources:
+              requests:
+                cpu: 100m
+                memory: 64Mi
+              limits:
+                memory: 250Mi
   destination:
     server: https://kubernetes.default.svc
     namespace: envoy-gateway-system
