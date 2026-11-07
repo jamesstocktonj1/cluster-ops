@@ -1,0 +1,64 @@
+# Omada controller chart values (chart version pinned in apps/omada.yaml).
+# Only differences from the chart defaults are listed.
+#
+# The chart creates a StatefulSet with ONE pod. Omada is not built to run as several
+# copies, so there is no replicaCount to turn up.
+
+config:
+  timezone: "Europe/London"
+
+  # The controller runs Java and an embedded MongoDB in one container. The image
+  # default heap is 1024m; stating it here makes the memory limit below easy to reason
+  # about (heap + MongoDB + JVM overhead must fit under the limit).
+  javaMaxHeapSize: "1g"
+
+# --- LAN access ---------------------------------------------------------------
+# One LoadBalancer Service carries every Omada port (web UI 8043, device adoption and
+# management 29810-29817, and so on) on a single LAN IP. This is the address your
+# Omada devices and your browser will use: https://10.0.40.205:8043
+#
+# Only the web UI is reachable through Cloudflare (a route in the tunnel dashboard,
+# see docs/OMADA.md). Device traffic (adoption, management) stays on this LAN IP.
+service:
+  type: LoadBalancer
+  annotations:
+    # Pinned so the address never changes: devices remember the controller by IP.
+    # Must be inside the pool (infrastructure/cilium/config/ip-pool.yaml) and unused.
+    # .201 Grafana, .202 Argo CD, .203 Pi-hole DNS, .204 Pi-hole web.
+    lbipam.cilium.io/ips: "10.0.40.205"
+
+# The chart's ingress is off by default; leaving it that way.
+ingress:
+  enabled: false
+
+# --- Storage ------------------------------------------------------------------
+# StatefulSet volume claims on Longhorn (2 replicas, so it survives a node loss).
+# "data" holds the MongoDB database and your site config; the chart's 1Gi default is
+# tight once a few devices have been reporting statistics for a while.
+# These can only be set before the first sync: a StatefulSet cannot change its volume
+# claims afterwards (grow the PVC in Longhorn instead).
+persistence:
+  data:
+    enabled: true
+    storageClassName: longhorn
+    size: 10Gi
+  logs:
+    enabled: true
+    storageClassName: longhorn
+    size: 2Gi
+
+# --- Image --------------------------------------------------------------------
+# The tag is fixed by the chart version, so there is no need to re-pull on every start
+# (the chart default is "Always").
+image:
+  pullPolicy: IfNotPresent
+
+# --- Resources ----------------------------------------------------------------
+# The controller is heavy for what it does: JVM + MongoDB. Requests also tell the
+# scheduler to pick a worker with room. No CPU limit, so startup is not throttled.
+resources:
+  requests:
+    cpu: 250m
+    memory: 1536Mi
+  limits:
+    memory: 2560Mi
