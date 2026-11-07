@@ -1,0 +1,34 @@
+# TP-Link Omada controller (manages the Omada access points/switches). See docs/OMADA.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: omada
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"   # after cilium (0) and cilium-config (1), which hand out the IP
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  sources:
+    # The chart is published to Docker Hub as an OCI artifact. In Argo CD the repoURL
+    # for OCI has no "oci://" prefix.
+    - repoURL: registry-1.docker.io/mbentley
+      chart: omada-controller-helm
+      targetRevision: 1.5.5   # chart 1.5.5 = Omada controller 6.3.0.111; bump to upgrade
+      helm:
+        releaseName: omada
+        valueFiles:
+          - $values/infrastructure/omada/values.yaml
+    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: omada
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

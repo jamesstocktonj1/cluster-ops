@@ -36,5 +36,8 @@ GitOps: push to `main` and Argo CD applies it.
 - **wasmCloud v2**: runs WebAssembly components.
 - **Prometheus Operator**: metrics, scraping opted-in pods.
 - **Grafana**: dashboards over Prometheus, public via the Cloudflare Tunnel.
+- **Omada controller**: manages the TP-Link network gear; devices use the LAN, the web UI is also
+  behind Cloudflare Access. See
+  [docs/OMADA.md](docs/OMADA.md).
 
 More detail for each is in [docs/](docs/).
