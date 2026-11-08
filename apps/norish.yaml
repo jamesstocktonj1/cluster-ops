@@ -1,0 +1,26 @@
+# Norish recipe manager (app + Postgres + Valkey + Obscura). See docs/NORISH.md.
+# Needs the norish-secrets Secret created by hand before it will start.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: norish
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"   # after longhorn, which provides the volumes
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+    targetRevision: main
+    path: infrastructure/norish   # every YAML file in this folder is applied
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: norish
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

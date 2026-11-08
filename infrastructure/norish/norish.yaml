@@ -1,0 +1,128 @@
+# The Norish app itself: uploads volume, Deployment, and ClusterIP Service.
+#
+#   browser -> Cloudflare Access -> tunnel -> cloudflared -> norish Service :80 -> pod :3000
+#                                                                   |-- postgres:5432
+#                                                                   |-- valkey:6379
+#                                                                   |-- obscura:9222
+#                                                                   '-- Longhorn volume at /app/uploads
+# Not exposed on the LAN: the only way in is the Cloudflare Tunnel (docs/NORISH.md).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: norish-uploads
+  namespace: norish
+spec:
+  accessModes: ["ReadWriteOnce"]   # one pod at a time, hence strategy Recreate below
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: norish
+  namespace: norish
+spec:
+  replicas: 1
+  # A ReadWriteOnce volume can only attach to one node. The default rolling update
+  # would start the new pod before stopping the old one and get stuck; Recreate
+  # stops the old pod first.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: norish
+  template:
+    metadata:
+      labels:
+        app: norish
+    spec:
+      containers:
+        - name: norish
+          # "latest" is what the compose file used. Argo CD will NOT notice a new
+          # "latest", so pin a version tag here once you know which one you run.
+          image: norishapp/norish:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            # The URL your browser uses. Login redirects go here, so it must match
+            # the public hostname in the Cloudflare tunnel (docs/NORISH.md).
+            - name: AUTH_URL
+              value: https://norish.jamesstockton.com
+            # Defined AFTER POSTGRES_PASSWORD on purpose: $(NAME) only expands
+            # variables declared earlier in this list.
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: norish-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgres://postgres:$(POSTGRES_PASSWORD)@postgres:5432/norish
+            - name: MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: norish-secrets
+                  key: MASTER_KEY
+            - name: OBSCURA_CDP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: norish-secrets
+                  key: OBSCURA_CDP_TOKEN
+            - name: OBSCURA_ENDPOINT
+              value: ws://obscura:9222
+            - name: VALKEY_URL
+              value: valkey://valkey:6379
+            - name: UPLOADS_DIR
+              value: /app/uploads
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          # Same endpoint the compose healthcheck used.
+          startupProbe:
+            httpGet:
+              path: /api/v1/health/live
+              port: http
+            periodSeconds: 10
+            failureThreshold: 18   # up to 3 minutes for first start (database migrations)
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health/live
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /api/v1/health/live
+              port: http
+            periodSeconds: 60
+            timeoutSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: norish-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: norish
+  namespace: norish
+spec:
+  # ClusterIP = reachable only inside the cluster. cloudflared connects to
+  # norish.norish.svc.cluster.local:80 (the tunnel route is set in the Cloudflare dashboard).
+  type: ClusterIP
+  selector:
+    app: norish
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
