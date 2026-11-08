@@ -1,0 +1,52 @@
+# Obscura renders recipe web pages for URL imports (a headless browser Norish drives
+# over a websocket). Stateless, so a plain Deployment with no volume.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: obscura
+  namespace: norish
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: obscura
+  template:
+    metadata:
+      labels:
+        app: obscura
+    spec:
+      containers:
+        - name: obscura
+          image: norishapp/obscura:0.2.5-norish.1
+          ports:
+            - name: cdp
+              containerPort: 9222
+          env:
+            # Must be the same value Norish sends (both read it from the same Secret key).
+            - name: OBSCURA_CDP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: norish-secrets
+                  key: OBSCURA_CDP_TOKEN
+          readinessProbe:
+            tcpSocket:
+              port: cdp
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 1Gi   # rendering heavy pages can spike
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: obscura
+  namespace: norish
+spec:
+  selector:
+    app: obscura
+  ports:
+    - name: cdp
+      port: 9222

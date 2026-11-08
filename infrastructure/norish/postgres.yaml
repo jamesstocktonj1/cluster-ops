@@ -1,0 +1,81 @@
+# Postgres for Norish. Replaces the compose "db" service.
+#
+# A StatefulSet (not a Deployment) because it owns a disk: volumeClaimTemplates gives
+# the pod its own Longhorn volume, which follows it if it moves to another worker.
+# Only ONE replica: Postgres is not built to run as several copies without extra tooling.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: norish
+spec:
+  serviceName: postgres   # gives the pod a stable DNS name
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_DB
+              value: norish
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: norish-secrets   # created by hand, see docs/NORISH.md
+                  key: POSTGRES_PASSWORD
+            # A fresh Longhorn volume has a lost+found folder at its root, and Postgres
+            # refuses to start in a non-empty directory. Use a subfolder instead.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "norish"]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "norish"]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn
+        resources:
+          requests:
+            storage: 5Gi
+---
+# Plain ClusterIP Service: Norish connects to postgres:5432 inside the namespace.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: norish
+spec:
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432

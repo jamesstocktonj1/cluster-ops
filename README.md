@@ -42,5 +42,7 @@ GitOps: push to `main` and Argo CD applies it.
 - **Omada controller**: manages the TP-Link network gear; devices use the LAN, the web UI is also
   behind Cloudflare Access. See
   [docs/OMADA.md](docs/OMADA.md).
+- **Norish**: recipe manager (app, Postgres, Valkey, Obscura), Cloudflare-only. See
+  [docs/NORISH.md](docs/NORISH.md).
 
 More detail for each is in [docs/](docs/).
