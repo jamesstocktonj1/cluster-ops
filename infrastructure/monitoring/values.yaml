@@ -93,6 +93,11 @@ prometheus:
       requests:
         cpu: 200m
         memory: 1Gi
+      # Cap memory so a runaway Prometheus is OOM-killed on its own instead of
+      # triggering Talos's node-level OOM controller (which kills the whole pod
+      # cgroup and starves neighbours like Longhorn on small 4GB workers).
+      limits:
+        memory: 2Gi
     storageSpec:
       volumeClaimTemplate:
         spec:
