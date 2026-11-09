@@ -52,10 +52,10 @@ spec:
             # the public hostname in the Cloudflare tunnel (docs/NORISH.md).
             - name: AUTH_URL
               value: https://norish.jamesstockton.com
+            - name: PASSWORD_AUTH_ENABLED
+              value: "true"
             # Defined AFTER POSTGRES_PASSWORD on purpose: $(NAME) only expands
             # variables declared earlier in this list.
-            - name: ENABLE_REGISTRATION
-              value: "true"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
