@@ -1,0 +1,66 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/London",
+  "schedule": ["before 6am on monday"],
+  "prConcurrentLimit": 5,
+  "labels": ["dependencies"],
+  "argocd": {
+    "managerFilePatterns": ["/^apps/.+\\.yaml$/"]
+  },
+  "kubernetes": {
+    "managerFilePatterns": ["/^infrastructure/.+\\.yaml$/"]
+  },
+  "customManagers": [
+    {
+      "description": "yamllint pinned in CI via pip",
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": ["pip install yamllint==(?<currentValue>\\S+)"],
+      "depNameTemplate": "yamllint",
+      "datasourceTemplate": "pypi"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Critical services are upgraded by hand: Cilium, Longhorn, Envoy Gateway, Tailscale, Talos/Kubernetes",
+      "matchFileNames": [
+        "apps/cilium.yaml",
+        "apps/longhorn.yaml",
+        "apps/envoy-gateway.yaml",
+        "apps/tailscale-operator.yaml",
+        "talos/**"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Group the monitoring stack",
+      "matchFileNames": ["apps/monitoring.yaml", "apps/monitoring-config.yaml"],
+      "groupName": "monitoring"
+    },
+    {
+      "description": "Group the Norish stack (app, obscura, postgres, valkey)",
+      "matchFileNames": ["infrastructure/norish/**"],
+      "groupName": "norish"
+    },
+    {
+      "description": "Postgres major versions need a manual data migration",
+      "matchFileNames": ["infrastructure/norish/postgres.yaml"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Automerge GitHub Actions and CI tools once checks pass",
+      "matchManagers": ["github-actions", "custom.regex"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "ci tooling",
+      "automerge": true
+    },
+    {
+      "description": "Automerge patch releases of container images once checks pass",
+      "matchManagers": ["kubernetes"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true
+    }
+  ]
+}
