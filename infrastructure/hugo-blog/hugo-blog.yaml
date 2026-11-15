@@ -59,8 +59,6 @@ metadata:
   name: hugo-blog
   namespace: hugo-blog
 spec:
-  # ClusterIP = reachable only inside the cluster. cloudflared connects to
-  # hugo-blog.hugo-blog.svc.cluster.local:80 (the tunnel route is set in the Cloudflare dashboard).
   type: ClusterIP
   selector:
     app: hugo-blog
