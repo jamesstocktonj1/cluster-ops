@@ -1,0 +1,25 @@
+# Hugo blog (static site served by nginx). See docs/HUGO-BLOG.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hugo-blog
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+    targetRevision: main
+    path: infrastructure/hugo-blog   # every YAML file in this folder is applied
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: hugo-blog
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

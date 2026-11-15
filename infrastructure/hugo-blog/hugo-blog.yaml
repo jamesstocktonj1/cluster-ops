@@ -1,0 +1,70 @@
+# The blog: a stateless static site (Deployment + ClusterIP Service).
+#
+#   browser -> Cloudflare -> tunnel -> cloudflared -> hugo-blog Service :80 -> pod :80
+#
+# Not exposed on the LAN: the only way in is the Cloudflare Tunnel (docs/HUGO-BLOG.md).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hugo-blog
+  namespace: hugo-blog
+spec:
+  replicas: 2   # stateless, so two pods keep the site up through a node loss or rollout
+  selector:
+    matchLabels:
+      app: hugo-blog
+  template:
+    metadata:
+      labels:
+        app: hugo-blog
+    spec:
+      # Spread across Proxmox hosts (docs/TOPOLOGY.md); never block a rollout.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: hugo-blog
+      containers:
+        - name: hugo-blog
+          # "latest" so each pod restart picks up a new build. Argo CD will NOT notice
+          # a new "latest" by itself: run `kubectl -n hugo-blog rollout restart
+          # deploy/hugo-blog` after publishing, or pin a version tag.
+          image: ghcr.io/jamesstocktonj1/hugo-blog:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hugo-blog
+  namespace: hugo-blog
+spec:
+  # ClusterIP = reachable only inside the cluster. cloudflared connects to
+  # hugo-blog.hugo-blog.svc.cluster.local:80 (the tunnel route is set in the Cloudflare dashboard).
+  type: ClusterIP
+  selector:
+    app: hugo-blog
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
