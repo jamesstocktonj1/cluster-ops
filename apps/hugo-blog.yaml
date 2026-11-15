@@ -1,4 +1,5 @@
-# Hugo blog (static site served by nginx). See docs/HUGO-BLOG.md.
+# Hugo blog (static site served by nginx). The manifests live in the hugo-blog repo
+# (deploy/), where the release workflow bumps the image tag. See docs/HUGO-BLOG.md.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -11,9 +12,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+    repoURL: https://github.com/jamesstocktonj1/hugo-blog.git
     targetRevision: main
-    path: infrastructure/hugo-blog   # every YAML file in this folder is applied
+    path: deploy   # every YAML file in this folder is applied
   destination:
     server: https://kubernetes.default.svc
     namespace: hugo-blog

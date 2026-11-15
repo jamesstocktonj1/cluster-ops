@@ -9,12 +9,20 @@ as `ghcr.io/jamesstocktonj1/hugo-blog:latest`. Public through the Cloudflare Tun
 browser -> Cloudflare -> tunnel -> cloudflared -> hugo-blog (ClusterIP :80) -> 2 pods
 ```
 
-Manifests are in [infrastructure/hugo-blog/](../infrastructure/hugo-blog/), deployed by
-[apps/hugo-blog.yaml](../apps/hugo-blog.yaml). No volumes and no Secrets.
+The manifests are **not in this repo**: they live in the hugo-blog repo's
+[deploy/](https://github.com/jamesstocktonj1/hugo-blog/tree/main/deploy) folder.
+[apps/hugo-blog.yaml](../apps/hugo-blog.yaml) is the only part here; it points Argo CD
+at that folder. No volumes and no Secrets.
+
+## Releasing
+
+Push to `main` in hugo-blog. The `Release` workflow builds and pushes the image, then its
+`deploy` job commits the new `sha-...` tag to `deploy/hugo-blog.yaml`. Argo CD syncs that
+commit and rolls the pods. To roll back, revert the `deploy:` commit.
 
 ## Deploy
 
-1. Commit and push; Argo CD creates the `hugo-blog` app. Check it:
+1. Merge to `main`; Argo CD creates the `hugo-blog` app. Check it:
 
    ```sh
    kubectl -n hugo-blog get pods,svc
@@ -33,12 +41,10 @@ Manifests are in [infrastructure/hugo-blog/](../infrastructure/hugo-blog/), depl
 
 ## Things to know
 
-- **Container port.** The Deployment assumes the image listens on port 80 (nginx).
-  If it doesn't, change `containerPort` in
-  [hugo-blog.yaml](../infrastructure/hugo-blog/hugo-blog.yaml).
-- **Private image.** If the ghcr package is private, the pods need an
-  `imagePullSecret`. Making the package public is simpler for a public blog.
-- **`latest` tag.** Argo CD won't notice a new image. After publishing a new build:
-  `kubectl -n hugo-blog rollout restart deploy/hugo-blog`.
-- **`baseURL`.** `hugo.toml` in the blog repo must be set to the public URL, or
-  links and the sitemap point at the wrong host.
+- **Container port.** The image is nginx-unprivileged and listens on 8080; the
+  Service maps port 80 to it.
+- **Private repo.** If the hugo-blog repo is private, Argo CD needs a read credential
+  for it. Public needs nothing.
+- **`baseURL`.** The Dockerfile builds with `--baseURL blog.jamesstockton.com`; it
+  probably wants the scheme (`https://blog.jamesstockton.com/`), or links and the
+  sitemap come out wrong.
