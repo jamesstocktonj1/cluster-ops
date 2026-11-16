@@ -1,0 +1,25 @@
+# Helm values for Kargo, deployed by Argo CD (apps/kargo.yaml).
+# Chart version is pinned in that Application, not here.
+
+api:
+  # The admin password hash and token signing key come from a Secret created by
+  # hand (kargo-admin in the kargo namespace, see docs/KARGO.md). It is deliberately
+  # NOT in git, so adminAccount.* is left unset here.
+  secret:
+    name: kargo-admin
+  service:
+    # Put the UI/API on the tailnet as kargo.<tailnet>.ts.net via the Tailscale
+    # operator (docs/TAILSCALE.md). Traffic is already encrypted by WireGuard, so
+    # Kargo serves plain HTTP behind it.
+    annotations:
+      tailscale.com/expose: "true"
+      tailscale.com/hostname: kargo
+      tailscale.com/tags: "tag:k8s"
+
+controller:
+  argocd:
+    # Where the Argo CD Applications live (this repo's apps/ create them here).
+    namespace: argocd
+  rollouts:
+    # Argo Rollouts isn't installed; leave its integration off.
+    integrationEnabled: false

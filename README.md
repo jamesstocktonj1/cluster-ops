@@ -44,6 +44,8 @@ GitOps: push to `main` and Argo CD applies it.
   [docs/OMADA.md](docs/OMADA.md).
 - **Norish**: recipe manager (app, Postgres, Valkey, Obscura), Cloudflare-only. See
   [docs/NORISH.md](docs/NORISH.md).
+- **Kargo**: promotes versions between environments through Argo CD, with
+  cert-manager for its webhooks. See [docs/KARGO.md](docs/KARGO.md).
 - **Hugo blog**: static blog site, public via the Cloudflare Tunnel. See
   [docs/HUGO-BLOG.md](docs/HUGO-BLOG.md).
 

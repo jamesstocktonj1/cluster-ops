@@ -1,0 +1,30 @@
+# cert-manager: issues the certificates Kargo's webhooks need. See docs/KARGO.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: quay.io/jetstack/charts   # OCI registry: no oci:// prefix in Argo
+    chart: cert-manager
+    targetRevision: v1.19.1   # bump to upgrade; read the release notes first
+    helm:
+      releaseName: cert-manager
+      valuesObject:
+        crds:
+          enabled: true
+          keep: true   # uninstalling the chart must never delete the CRDs (and every Certificate)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # No prune: a bad commit must not delete the CRDs and, with them, every Certificate.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true   # the CRDs are too big for client-side apply
