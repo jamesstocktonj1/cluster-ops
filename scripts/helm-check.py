@@ -26,6 +26,8 @@ def run(*cmd):
 
 for app_file in sorted(Path("apps").glob("*.yaml")):
     app = yaml.safe_load(app_file.read_text())
+    if app.get("kind") != "Application":
+        continue  # e.g. an ApplicationSet, whose chart is in the app's own repo
     spec = app["spec"]
     sources = spec.get("sources") or [spec["source"]]
     for src in sources:
