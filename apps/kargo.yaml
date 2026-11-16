@@ -1,0 +1,33 @@
+# Kargo: promotes versions between environments by committing to git and telling
+# Argo CD to sync. Needs the kargo-admin Secret and cert-manager (docs/KARGO.md).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"   # after cert-manager's CRDs exist
+spec:
+  project: default
+  sources:
+    - repoURL: ghcr.io/akuity/kargo-charts   # OCI registry: no oci:// prefix in Argo
+      chart: kargo
+      targetRevision: 1.12.5   # bump to upgrade; read the Kargo release notes first
+      helm:
+        releaseName: kargo
+        valueFiles:
+          - $values/infrastructure/kargo/values.yaml
+    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kargo
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # No prune: a bad commit must not delete the CRDs and, with them, every Project and Stage.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true            # the CRDs are too big for client-side apply
+      - SkipDryRunOnMissingResource=true   # the chart's Certificates need cert-manager's CRDs
