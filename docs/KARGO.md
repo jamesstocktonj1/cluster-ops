@@ -77,6 +77,30 @@ Without Tailscale, `kubectl -n kargo port-forward svc/kargo-api 8080:80`.
 4. Keep per-environment config in the repo (Kustomize overlays or a values file per
    environment) so each Stage has something to commit to.
 
+## The kargo-demo environments
+
+[apps/kargo-demo.yaml](../apps/kargo-demo.yaml) is an ApplicationSet that creates
+`kargo-demo-dev` and `kargo-demo-prod` from the Helm chart in the
+[kargo-demo](https://github.com/jamesstocktonj1/kargo-demo) repo (`charts/kargo-demo`,
+with `deploy/<env>/values.yaml` per environment). They deploy to the `kargo-demo-dev` and
+`kargo-demo-prod` namespaces and are annotated for the Kargo stages `kargo-demo:dev` and
+`kargo-demo:prod`. Auto-sync is off on purpose: Kargo syncs after it commits the new
+image tag. The first deploy of each is a manual sync.
+
+Public hostnames, added to the `stack` tunnel in the Cloudflare dashboard (routes are
+not in git, see [CLOUDFLARE.md](CLOUDFLARE.md)). No Cloudflare Access; the app has no
+secrets:
+
+| Subdomain         | Domain              | Type | URL                                          |
+|-------------------|---------------------|------|----------------------------------------------|
+| `kargo-demo-dev`  | `jamesstockton.com` | HTTP | `kargo-demo.kargo-demo-dev.svc.cluster.local:80`  |
+| `kargo-demo-prod` | `jamesstockton.com` | HTTP | `kargo-demo.kargo-demo-prod.svc.cluster.local:80` |
+
+```bash
+curl -X POST https://kargo-demo-dev.jamesstockton.com/greet \
+  -H 'Content-Type: application/json' -d '{"name":"James"}'
+```
+
 ## Things to know
 
 - **No prune on the Application**, so a bad commit can't delete Kargo's CRDs and

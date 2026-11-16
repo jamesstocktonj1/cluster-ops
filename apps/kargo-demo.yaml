@@ -1,0 +1,45 @@
+# kargo-demo (Go API) in two environments, dev and prod, from the kargo-demo repo's Helm
+# chart. One Application per list entry below: kargo-demo-dev and kargo-demo-prod. The Kargo
+# Project "kargo-demo" promotes between them; see docs/KARGO.md.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: kargo-demo
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - list:
+        elements:
+          - env: dev
+          - env: prod
+  template:
+    metadata:
+      name: kargo-demo-{{ .env }}
+      annotations:
+        # Lets the Kargo Stage <project>:<stage> update and sync this Application.
+        kargo.akuity.io/authorized-stage: kargo-demo:{{ .env }}
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/jamesstocktonj1/kargo-demo.git
+        targetRevision: main
+        path: charts/kargo-demo
+        helm:
+          releaseName: kargo-demo   # Service and Deployment are named after it
+          valueFiles:
+            - ../../deploy/{{ .env }}/values.yaml   # Kargo bumps image.tag in this file
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: kargo-demo-{{ .env }}
+      # No automated sync: Kargo triggers each sync after it commits the new tag, so
+      # Argo CD can't deploy a commit before Kargo is ready to verify it. The first
+      # deploy of each environment is therefore a manual sync (or the first promotion).
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true
