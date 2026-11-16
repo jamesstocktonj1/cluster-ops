@@ -33,7 +33,7 @@ spec:
         helm:
           releaseName: kargo-demo   # Service and Deployment are named after it
           valueFiles:
-            - ../../envs/{{ .env }}/values.yaml   # Kargo bumps image.tag in this file
+            - ../../deploy/{{ .env }}/values.yaml   # Kargo bumps image.tag in this file
       destination:
         server: https://kubernetes.default.svc
         namespace: kargo-demo-{{ .env }}

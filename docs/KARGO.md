@@ -82,7 +82,7 @@ Without Tailscale, `kubectl -n kargo port-forward svc/kargo-api 8080:80`.
 [apps/kargo-demo.yaml](../apps/kargo-demo.yaml) is an ApplicationSet that creates
 `kargo-demo-dev` and `kargo-demo-prod` from the Helm chart in the
 [kargo-demo](https://github.com/jamesstocktonj1/kargo-demo) repo (`charts/kargo-demo`,
-with `envs/<env>/values.yaml` per environment). They deploy to the `kargo-demo-dev` and
+with `deploy/<env>/values.yaml` per environment). They deploy to the `kargo-demo-dev` and
 `kargo-demo-prod` namespaces and are annotated for the Kargo stages `kargo-demo:dev` and
 `kargo-demo:prod`. Auto-sync is off on purpose: Kargo syncs after it commits the new
 image tag. The first deploy of each is a manual sync.
