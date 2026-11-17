@@ -1,0 +1,24 @@
+# Kargo Warehouse, Stages and promotion policy for kargo-demo, from the kargo-demo repo
+# (kargo/). Deploys into the existing Kargo Project namespace. See docs/KARGO.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kargo-demo-pipeline
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"   # after kargo and the kargo-demo environments
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jamesstocktonj1/kargo-demo.git
+    targetRevision: main
+    path: kargo   # every YAML file in this folder is applied
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kargo-demo
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
