@@ -1,5 +1,5 @@
-# kargo-demo (Go API) in two environments, dev and prod, from the kargo-demo repo's Helm
-# chart. One Application per list entry below: kargo-demo-dev and kargo-demo-prod. The Kargo
+# kargo-demo (Go API) in three environments, dev, staging and prod, from the kargo-demo repo's Helm
+# chart. One Application per list entry below: kargo-demo-dev, kargo-demo-staging and kargo-demo-prod. The Kargo
 # Project "kargo-demo" promotes between them; see docs/KARGO.md.
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
@@ -15,6 +15,7 @@ spec:
     - list:
         elements:
           - env: dev
+          - env: staging
           - env: prod
   template:
     metadata:

@@ -80,11 +80,11 @@ Without Tailscale, `kubectl -n kargo port-forward svc/kargo-api 8080:80`.
 ## The kargo-demo environments
 
 [apps/kargo-demo.yaml](../apps/kargo-demo.yaml) is an ApplicationSet that creates
-`kargo-demo-dev` and `kargo-demo-prod` from the Helm chart in the
+`kargo-demo-dev`, `kargo-demo-staging` and `kargo-demo-prod` from the Helm chart in the
 [kargo-demo](https://github.com/jamesstocktonj1/kargo-demo) repo (`charts/kargo-demo`,
-with `deploy/<env>/values.yaml` per environment). They deploy to the `kargo-demo-dev` and
-`kargo-demo-prod` namespaces and are annotated for the Kargo stages `kargo-demo:dev` and
-`kargo-demo:prod`. Auto-sync is off on purpose: Kargo syncs after it commits the new
+with `deploy/<env>/values.yaml` per environment). They deploy to the `kargo-demo-<env>` namespaces and are annotated for the Kargo stages
+`kargo-demo:<env>`. The pipeline is `dev -> staging -> prod`: dev and staging promote automatically, prod
+is promoted by hand and only after the freight has sat in staging for 5 minutes. Auto-sync is off on purpose: Kargo syncs after it commits the new
 image tag. The first deploy of each is a manual sync.
 
 Public hostnames, added to the `stack` tunnel in the Cloudflare dashboard (routes are
@@ -94,6 +94,7 @@ secrets:
 | Subdomain         | Domain              | Type | URL                                          |
 |-------------------|---------------------|------|----------------------------------------------|
 | `kargo-demo-dev`  | `jamesstockton.com` | HTTP | `kargo-demo.kargo-demo-dev.svc.cluster.local:80`  |
+| `kargo-demo-staging` | `jamesstockton.com` | HTTP | `kargo-demo.kargo-demo-staging.svc.cluster.local:80` |
 | `kargo-demo-prod` | `jamesstockton.com` | HTTP | `kargo-demo.kargo-demo-prod.svc.cluster.local:80` |
 
 ```bash
