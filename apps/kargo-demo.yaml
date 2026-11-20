@@ -29,7 +29,7 @@ spec:
       project: default
       source:
         repoURL: https://github.com/jamesstocktonj1/kargo-demo.git
-        targetRevision: main
+        targetRevision: stage/{{ .env }}   # Kargo rebuilds this branch on each promotion
         path: charts/kargo-demo
         helm:
           releaseName: kargo-demo   # Service and Deployment are named after it
