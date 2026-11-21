@@ -1,0 +1,31 @@
+# Argo Rollouts: runs the AnalysisRuns Kargo creates to verify Freight in staging (the
+# staging-slo AnalysisTemplate in the kargo-demo repo). Only the controller and CRDs are
+# used, not Rollout resources. See docs/KARGO.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-rollouts
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"   # before kargo, and before the pipeline needs its CRDs
+spec:
+  project: default
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-rollouts
+    targetRevision: 2.43.12   # bump to upgrade; read the release notes first
+    helm:
+      releaseName: argo-rollouts
+      valuesObject:
+        installCRDs: true
+        keepCRDs: true   # uninstalling the chart must never delete the CRDs (and every AnalysisTemplate)
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-rollouts
+  syncPolicy:
+    automated:
+      selfHeal: true
+      # No prune: a bad commit must not delete the CRDs and, with them, every AnalysisTemplate.
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true   # the CRDs are too big for client-side apply

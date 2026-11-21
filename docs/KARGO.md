@@ -41,7 +41,7 @@ kubectl -n kargo create secret generic kargo-admin \
 
 ## 2. Deploy
 
-Merge to `main`. Argo CD creates `cert-manager` (wave 0), then `kargo` (wave 1).
+Merge to `main`. Argo CD creates `cert-manager` and `argo-rollouts` (wave 0), then `kargo` (wave 1).
 
 ```bash
 kubectl -n cert-manager get pods
@@ -83,8 +83,13 @@ Without Tailscale, `kubectl -n kargo port-forward svc/kargo-api 8080:80`.
 `kargo-demo-dev`, `kargo-demo-staging` and `kargo-demo-prod` from the Helm chart in the
 [kargo-demo](https://github.com/jamesstocktonj1/kargo-demo) repo (`charts/kargo-demo`,
 with `deploy/<env>/values.yaml` per environment). They deploy to the `kargo-demo-<env>` namespaces and are annotated for the Kargo stages
-`kargo-demo:<env>`. The pipeline is `dev -> staging -> prod`: dev and staging promote automatically, prod
-is promoted by hand and only after the freight has sat in staging for 5 minutes. Auto-sync is off on purpose: Kargo syncs after it commits the new
+`kargo-demo:<env>`. The pipeline is `dev -> staging -> prod`: all three promote automatically. Freight must
+pass the `staging-slo` verification in staging (p95 under 10ms, at most 5% non-2xx, at least 100 requests per
+2 minutes, from the Prometheus metrics) and sit there for 5 minutes before it goes to prod. A failed
+verification does not roll staging back; it only stops the freight reaching prod. Each environment tracks its own branch, `stage/<env>`, which Kargo rebuilds from `main`
+(chart plus that environment's values) on every promotion. A shared branch makes Kargo report
+stages as Unhealthy, because another stage's promotion moves the branch past the commit
+this one expects. Auto-sync is off on purpose: Kargo syncs after it commits the new
 image tag. The first deploy of each is a manual sync.
 
 Public hostnames, added to the `stack` tunnel in the Cloudflare dashboard (routes are
@@ -106,8 +111,9 @@ curl -X POST https://kargo-demo-dev.jamesstockton.com/greet \
 
 - **No prune on the Application**, so a bad commit can't delete Kargo's CRDs and
   every Project and Stage with them. Same for cert-manager.
-- **Argo Rollouts integration is off** because Rollouts isn't installed. Flip
-  `controller.rollouts.integrationEnabled` if you add it.
+- **Argo Rollouts** ([apps/argo-rollouts.yaml](../apps/argo-rollouts.yaml)) is installed only for its
+  CRDs and AnalysisRun controller, which Kargo's stage verification needs
+  (`controller.rollouts.integrationEnabled`). No prune, so the CRDs can't be deleted by a bad commit.
 - **Tailscale tag.** The Service uses `tag:k8s`, so the existing tailnet policy
   already lets the operator create the proxy.
 - **Upgrades.** Bump `targetRevision` in `apps/kargo.yaml` (or `apps/cert-manager.yaml`)
