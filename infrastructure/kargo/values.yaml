@@ -21,5 +21,6 @@ controller:
     # Where the Argo CD Applications live (this repo's apps/ create them here).
     namespace: argocd
   rollouts:
-    # Argo Rollouts isn't installed; leave its integration off.
-    integrationEnabled: false
+    # Lets Stages run verification (AnalysisTemplates). Needs Argo Rollouts
+    # (apps/argo-rollouts.yaml).
+    integrationEnabled: true
