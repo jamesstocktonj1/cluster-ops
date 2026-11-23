@@ -4,7 +4,7 @@
 # to the Service's cluster IP, so queries are spread across the 3 Pi-hole pods.
 #
 # This is a second Service for the same pods as the Cilium LAN one in
-# infrastructure/pihole/values.yaml. It lives here, not in the Pi-hole chart, because
+# infrastructure/pihole/manifests/dns-service.yaml. It lives here, not in the Pi-hole chart, because
 # it is Tailscale configuration. The namespace is explicit: this app's default is argocd.
 #
 # Caveat: pods see the proxy pod's IP as the client, not the tailnet device, so the
@@ -20,10 +20,9 @@ metadata:
 spec:
   type: LoadBalancer
   loadBalancerClass: tailscale
-  # Same labels the Pi-hole chart puts on its pods.
+  # The label the Pi-hole chart puts on every pod, in all three releases.
   selector:
     app: pihole
-    release: pihole
   # DNS uses UDP normally and falls back to TCP for large answers, so expose both.
   ports:
     - name: dns-udp

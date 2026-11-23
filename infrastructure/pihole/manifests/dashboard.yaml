@@ -1,0 +1,108 @@
+# Dobbelt-Pi-hole (https://github.com/tursoe/Dobbelt-Pi-hole): one web page to manage
+# all three Pi-holes. There is no backend or database: the page calls each Pi-hole's
+# API through an nginx in this container (/api1, /api2, /api3).
+#
+# nginx looks the three hostnames up once, when the container starts, and refuses to
+# start if one does not resolve. That is why each Pi-hole is its own Helm release with
+# a fixed Service name (pihole-N-web). If the pod is Pending/crashing right after a
+# first sync, the Pi-holes are not up yet; it retries by itself.
+#
+# Log in from the browser with the Pi-hole admin password (Secret pihole-admin).
+# Whoever can log in controls all three Pi-holes, so keep this LAN-only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pihole-dashboard
+  namespace: pihole
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: pihole-dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: pihole-dashboard
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101   # the image's own user
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: dashboard
+          image: ghcr.io/tursoe/dobbelt-pi-hole:1.5.012-1   # pinned; bump to upgrade
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PIHOLE_COUNT
+              value: "3"
+            # Plain http inside the cluster, so there is no certificate to verify.
+            - name: PIHOLE_1_URL
+              value: http://pihole-1-web.pihole.svc.cluster.local/api
+            - name: PIHOLE_1_NAME
+              value: pihole-1
+            - name: PIHOLE_1_VERIFY_TLS
+              value: "false"
+            - name: PIHOLE_2_URL
+              value: http://pihole-2-web.pihole.svc.cluster.local/api
+            - name: PIHOLE_2_NAME
+              value: pihole-2
+            - name: PIHOLE_2_VERIFY_TLS
+              value: "false"
+            - name: PIHOLE_3_URL
+              value: http://pihole-3-web.pihole.svc.cluster.local/api
+            - name: PIHOLE_3_NAME
+              value: pihole-3
+            - name: PIHOLE_3_VERIFY_TLS
+              value: "false"
+          # /healthz only proves nginx is up, not that the Pi-holes answer.
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          # The entrypoint writes its generated nginx config and a copy of the web
+          # files under /tmp (the upstream compose file gives it a 16m tmpfs).
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 64Mi
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-dashboard
+  namespace: pihole
+  annotations:
+    lbipam.cilium.io/ips: "10.0.40.204"   # inside the pool and unused (.203 is DNS, .205 Omada)
+spec:
+  type: LoadBalancer
+  # One pod, so no client-IP concern; Cluster keeps it reachable from any node's ARP.
+  selector:
+    app.kubernetes.io/name: pihole-dashboard
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -1,0 +1,26 @@
+# Plain manifests around the three Pi-holes: the shared DNS LoadBalancer (10.0.40.203)
+# and the Dobbelt dashboard that manages all instances (10.0.40.204). See docs/PIHOLE.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pihole-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"   # after pihole-1..3: the dashboard resolves their Services when it starts
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+    targetRevision: main
+    path: infrastructure/pihole/manifests   # every YAML file in this folder is applied
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pihole
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

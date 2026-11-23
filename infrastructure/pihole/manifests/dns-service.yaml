@@ -1,0 +1,32 @@
+# The one LAN address for DNS: 10.0.40.203, over all three Pi-hole pods.
+# Put this in the router's DHCP DNS setting. Each Pi-hole release (apps/pihole-N.yaml)
+# keeps its own unused ClusterIP DNS Service; this one selects the pods of all three.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pihole-dns
+  namespace: pihole
+  annotations:
+    # Pinned so the address never changes. Must be inside the pool
+    # (infrastructure/cilium/config/ip-pool.yaml) and unused: .201 Grafana,
+    # .202 Argo CD, .203 this, .204 Pi-hole dashboard, .205 Omada.
+    lbipam.cilium.io/ips: "10.0.40.203"
+spec:
+  type: LoadBalancer
+  # Local = a node only accepts DNS if it runs a Pi-hole pod itself. That keeps the
+  # real client IP, so the Pi-hole dashboards show which device asked, not a node.
+  # Cilium only announces the IP from nodes that have a pod, so this is safe.
+  externalTrafficPolicy: Local
+  # `app: pihole` is on every pod of all three releases.
+  selector:
+    app: pihole
+  # DNS uses UDP normally and falls back to TCP for large answers: both on one IP.
+  ports:
+    - name: dns-udp
+      port: 53
+      targetPort: dns-udp
+      protocol: UDP
+    - name: dns
+      port: 53
+      targetPort: dns
+      protocol: TCP

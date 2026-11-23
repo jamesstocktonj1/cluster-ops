@@ -1,19 +1,25 @@
-# Pi-hole chart values (chart version pinned in apps/pihole.yaml).
+# Pi-hole chart values (chart version pinned in apps/pihole-1.yaml, -2, -3).
 # Only differences from the chart defaults are listed.
 
-# Three identical, independent Pi-holes in one Deployment. They are stateless on
-# purpose (no volume, see below), so each one is configured only from this file.
-replicaCount: 3
+# Used by three Argo CD apps (apps/pihole-1.yaml, -2, -3): one Helm release each, so
+# every Pi-hole gets its own Service name. The Dobbelt dashboard
+# (infrastructure/pihole/manifests/dashboard.yaml) needs that: it points at each
+# Pi-hole by a stable address, and a Deployment's pods have none. The three are
+# identical and independent (no volume, see below); they differ only by release name.
+replicaCount: 1
 
-# Replace pods one at a time. Cilium only sends traffic to Ready pods, so DNS keeps
-# working through an upgrade as long as two replicas are up.
+# Replace the pod in place. maxSurge 0 matters: with the hard spread rule below, a
+# surge pod would have nowhere to go. DNS keeps working through an upgrade because
+# only one release is updated at a time, and Cilium only sends traffic to Ready pods.
 strategyType: RollingUpdate
 maxSurge: 0
 maxUnavailable: 1
 
-# Put each replica on a different worker. If two shared a node and that node died,
+# Put each Pi-hole on a different worker. If two shared a node and that node died,
 # you would lose two thirds of your DNS. DoNotSchedule makes this a hard rule.
-# The labels match the ones this chart puts on its pods.
+# The selector has no `release` label on purpose: it must match the pods of all three
+# releases (each release only has one pod, so a per-release selector would spread
+# nothing). `app: pihole` is the label this chart puts on every pod.
 #
 # Also spread over the two Proxmox hosts (2 + 1), so losing a whole host still leaves
 # DNS running. That one is a preference (ScheduleAnyway): with a host down, the
@@ -25,7 +31,6 @@ topologySpreadConstraints:
     labelSelector:
       matchLabels:
         app: pihole
-        release: pihole
   - maxSkew: 1
     topologyKey: topology.kubernetes.io/zone
     whenUnsatisfiable: ScheduleAnyway
@@ -33,39 +38,25 @@ topologySpreadConstraints:
     labelSelector:
       matchLabels:
         app: pihole
-        release: pihole
 
-# --- DNS: the one LAN IP ------------------------------------------------------
-serviceDns:
-  # DNS needs port 53 over both UDP and TCP. A "mixed" Service carries both on one
-  # LoadBalancer, so they share a single IP (the chart's default is two Services).
-  mixedService: true
-  type: LoadBalancer
-  # Local = a node only accepts DNS if it runs a Pi-hole pod itself. That keeps the
-  # real client IP, so the Pi-hole dashboard shows which device asked, not a node.
-  # Cilium only announces the IP from nodes that have a pod, so this is safe.
-  externalTrafficPolicy: Local
-  annotations:
-    # Pinned so the address never changes: this is what goes in the router's DHCP
-    # DNS setting. Must be inside the pool (infrastructure/cilium/config/ip-pool.yaml)
-    # and unused. 10.0.40.201 is Grafana and .202 is Argo CD.
-    lbipam.cilium.io/ips: "10.0.40.203"
-
-# --- Web admin UI -------------------------------------------------------------
-# On its own LAN IP so you can open http://10.0.40.204/admin (https works too, with
-# Pi-hole's self-signed certificate). A separate IP from DNS, not a shared one: each
-# Service gets its own Cilium L2 announcer, and two Services sharing an address could
-# be announced by different nodes.
+# --- Services -----------------------------------------------------------------
+# Neither Service of a release is on the LAN. The chart cannot turn its DNS Service
+# off, so it is kept as an unused ClusterIP.
 #
-# Each replica has its own settings and query log, and Local sends all traffic to the
-# pod on the node announcing the IP. So you see one replica's dashboard, and it
-# stays the same one (and your login keeps working) until that node or pod goes away.
-# To look at a specific replica use a port-forward instead (docs/PIHOLE.md).
+# The LAN DNS address (10.0.40.203) is one shared LoadBalancer Service over all three
+# pods: infrastructure/pihole/manifests/dns-service.yaml.
+#
+# The web/API Service (pihole-N-web, port 80) is what the dashboard talks to. The
+# Pi-hole admin pages are not on a LAN IP any more; use the dashboard
+# (10.0.40.204), or a port-forward to one Pi-hole (docs/PIHOLE.md).
+serviceDns:
+  mixedService: true
+  type: ClusterIP
+
 serviceWeb:
-  type: LoadBalancer
-  externalTrafficPolicy: Local
-  annotations:
-    lbipam.cilium.io/ips: "10.0.40.204"   # inside the pool and unused (.201 Grafana, .202 Argo CD, .203 DNS)
+  type: ClusterIP
+  https:
+    enabled: false   # the dashboard uses plain http inside the cluster
 
 # We are not using Pi-hole as the DHCP server (the router does that), so skip the
 # Service for it.

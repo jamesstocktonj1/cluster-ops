@@ -1,0 +1,34 @@
+# Pi-hole DNS ad blocker, instance 1 of 3. One Helm release per instance so each has its
+# own Service for the dashboard; they share infrastructure/pihole/values.yaml. The
+# shared DNS IP and the dashboard are in apps/pihole-config.yaml. See docs/PIHOLE.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pihole-1
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"   # after cilium (0) and cilium-config (1), which hand out the IP
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io   # deleting this app also deletes what it created
+spec:
+  project: default
+  sources:
+    - repoURL: https://mojo2600.github.io/pihole-kubernetes/
+      chart: pihole
+      targetRevision: 2.38.0   # bump in all three files to upgrade; read the release notes first
+      helm:
+        releaseName: pihole-1
+        valueFiles:
+          - $values/infrastructure/pihole/values.yaml
+    - repoURL: https://github.com/jamesstocktonj1/cluster-ops.git
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: pihole
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
