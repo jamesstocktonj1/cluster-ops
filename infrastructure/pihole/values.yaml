@@ -96,6 +96,7 @@ extraEnvVars:
 adlists:
   - https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
   - https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV.txt
+  - https://gist.githubusercontent.com/jamesstocktonj1/5cfadaf37ebf3924bb7e2b1eb9ea52da/raw/21f0f77f97b8bafacbc3e402cfa159fddf231d4c/pihole-extras.txt
 
 # --- Storage ------------------------------------------------------------------
 # No PersistentVolumeClaim. A single ReadWriteOnce volume cannot be shared by three
